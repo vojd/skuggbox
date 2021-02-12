@@ -1,0 +1,10 @@
+[package]
+name = "metazoa-rs"
+version = "0.1.0"
+authors = ["Mathias Tervo <mathias.tervo@embark-studios.com>"]
+edition = "2018"
+
+[dependencies]
+gl = "*"
+glutin = "0.26"
+winit = "0.24"
