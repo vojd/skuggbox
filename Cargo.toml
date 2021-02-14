@@ -5,6 +5,7 @@ authors = ["Mathias Tervo <mathias.tervo@embark-studios.com>"]
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.38"
 gl = "*"
 glutin = "0.26"
 winit = "0.24"
