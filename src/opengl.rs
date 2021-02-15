@@ -7,26 +7,28 @@ use anyhow::Error;
 use crate::utils::cstr_with_len;
 
 pub struct Shader {
-    id: gl::types::GLuint,
+    pub(crate) id: gl::types::GLuint,
 }
 
 impl Shader {
-    pub fn from_source(source_file: &str, shader_type: gl::types::GLuint) -> Result<Shader, Error> {
+    pub fn from_source(
+        source_file: String,
+        shader_type: gl::types::GLuint,
+    ) -> Result<Shader, Error> {
         let id = shader_from_source(source_file, shader_type).expect("Shader compilation");
         Ok(Shader { id })
     }
 }
 
-fn read_from_file(source_file: &str) -> CString {
+fn read_from_file(source_file: String) -> CString {
     let mut file = File::open(source_file).expect("Failed to read file");
     let mut s = String::new();
     file.read_to_string(&mut s).unwrap();
-    let src = CString::new(s).unwrap();
-    src
+    CString::new(s).unwrap()
 }
 
 fn shader_from_source(
-    source_file: &str,
+    source_file: String,
     shader_type: gl::types::GLuint,
 ) -> Result<gl::types::GLuint, String> {
     let src = read_from_file(source_file);
@@ -65,69 +67,4 @@ fn shader_from_source(
     }
     println!("2");
     Ok(id)
-}
-
-pub struct ShaderProgram {
-    id: gl::types::GLuint,
-    link_status: gl::types::GLint,
-}
-
-impl ShaderProgram {
-    pub fn new(vert_shader: Shader, frag_shader: Shader) -> Self {
-        let id = unsafe { gl::CreateProgram() };
-        let mut link_status: gl::types::GLint = 1;
-        unsafe {
-            gl::AttachShader(id, vert_shader.id);
-            gl::AttachShader(id, frag_shader.id);
-            gl::LinkProgram(id);
-        }
-
-        let mut success: gl::types::GLint = 1;
-        unsafe {
-            gl::GetProgramiv(id, gl::LINK_STATUS, &mut success);
-        }
-
-        if success == 0 {
-            let mut len: gl::types::GLint = 0;
-            unsafe {
-                gl::GetProgramiv(id, gl::INFO_LOG_LENGTH, &mut len);
-            }
-
-            let error = cstr_with_len(len as usize);
-
-            unsafe {
-                gl::GetProgramInfoLog(
-                    id,
-                    len,
-                    std::ptr::null_mut(),
-                    error.as_ptr() as *mut gl::types::GLchar,
-                );
-            }
-
-            eprintln!("linker error {}", error.to_string_lossy());
-            // return Err(error.to_string_lossy().into_owned());
-        }
-
-        unsafe {
-            gl::DetachShader(id, vert_shader.id);
-            gl::DetachShader(id, frag_shader.id);
-        }
-
-        Self { id, link_status }
-    }
-
-    /// Stupid `use` to be reserved word `e
-    pub fn activate(&self) {
-        unsafe {
-            gl::UseProgram(self.id);
-        }
-    }
-}
-
-impl Drop for ShaderProgram {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteProgram(self.id);
-        }
-    }
 }

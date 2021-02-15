@@ -1,5 +1,5 @@
 /// Generate and bind an array buffer
-pub fn gen_array_buffer(vertices: &Vec<f32>) -> gl::types::GLuint {
+pub fn gen_array_buffer(vertices: &[f32]) -> gl::types::GLuint {
     let mut vbo: gl::types::GLuint = 0;
     unsafe {
         gl::GenBuffers(1, &mut vbo);

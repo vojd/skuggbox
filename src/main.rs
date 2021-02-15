@@ -2,6 +2,9 @@ extern crate gl;
 extern crate glutin;
 extern crate winit;
 
+use std::sync::mpsc::channel;
+use std::thread;
+
 use glutin::ContextBuilder;
 use winit::{
     event::{Event, WindowEvent},
@@ -10,10 +13,11 @@ use winit::{
 };
 
 use crate::buffer::gen_array_buffer;
-use crate::opengl::{Shader, ShaderProgram};
+use crate::shader::ShaderService;
 
 mod buffer;
 mod opengl;
+mod shader;
 mod utils;
 
 macro_rules! glchk {
@@ -56,12 +60,17 @@ fn main() {
 
     gl::load_with(|s| context.get_proc_address(s) as *const _);
 
-    let vertex_shader =
-        Shader::from_source("shaders/base.vert", gl::VERTEX_SHADER).expect("shader error");
-    let frag_shader =
-        Shader::from_source("shaders/base.frag", gl::FRAGMENT_SHADER).expect("shader error");
+    // shader compiler channel
+    let (tx, rx) = channel();
 
-    let shader_program = ShaderProgram::new(vertex_shader, frag_shader);
+    let mut shaders = ShaderService::new(
+        "shaders".to_string(),
+        "base.vert".to_string(),
+        "base.frag".to_string(),
+    );
+    let handle = thread::spawn(move || {
+        glsl_watcher::watch(tx, "shaders", "base.vert", "base.frag");
+    });
 
     let vertices: Vec<f32> = vec![
         1.0, 1.0, 0.0, // 0
@@ -73,7 +82,7 @@ fn main() {
     let vao = gen_array_buffer(&vertices);
 
     unsafe {
-        gl::Viewport(0, 0, 900, 700);
+        gl::Viewport(0, 0, 640, 480);
         gl::ClearColor(0.3, 0.3, 0.5, 1.0);
     }
 
@@ -82,16 +91,28 @@ fn main() {
 
         *control_flow = ControlFlow::Wait;
 
+        match &rx.try_recv() {
+            Ok(_) => {
+                println!("now");
+                shaders.reload();
+            }
+            Err(_) => {}
+        }
+
+        context.swap_buffers().unwrap();
+
         match event {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
             } => {
                 println!("Bye now...");
+
                 *control_flow = ControlFlow::Exit
             }
-            Event::RedrawRequested(_) => {
-                shader_program.activate();
+
+            Event::MainEventsCleared => {
+                unsafe { gl::UseProgram(shaders.program.id) };
 
                 unsafe {
                     gl::Clear(gl::COLOR_BUFFER_BIT);
@@ -100,9 +121,14 @@ fn main() {
                     gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
                 }
 
+                unsafe { gl::UseProgram(0) };
                 context.swap_buffers().unwrap();
             }
+
+            Event::RedrawRequested(_) => {}
             _ => (),
         }
     });
+
+    handle.join().unwrap();
 }
