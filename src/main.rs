@@ -19,6 +19,7 @@ mod buffer;
 mod shader;
 mod utils;
 
+#[allow(unused_macros)]
 macro_rules! glchk {
     ($($s:stmt;)*) => {
         $(
@@ -88,7 +89,6 @@ fn main() {
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
-
         *control_flow = ControlFlow::Wait;
 
         if rx.try_recv().is_ok() {
@@ -107,7 +107,11 @@ fn main() {
             }
 
             Event::MainEventsCleared => {
-                unsafe { gl::UseProgram(shaders.program.id) };
+                if let Some(program) = &shaders.program {
+                    unsafe { gl::UseProgram(program.id) };
+                } else {
+                    unsafe { gl::UseProgram(0) };
+                }
 
                 unsafe {
                     gl::Clear(gl::COLOR_BUFFER_BIT);

@@ -5,3 +5,7 @@ pub fn cstr_with_len(len: usize) -> CString {
     buffer.extend([b' '].iter().cycle().take(len));
     unsafe { CString::from_vec_unchecked(buffer) }
 }
+
+pub fn cstr_to_str(cstr: &CString) -> String {
+    cstr.to_string_lossy().to_string()
+}

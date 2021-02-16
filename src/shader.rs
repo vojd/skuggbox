@@ -2,14 +2,12 @@ use std::ffi::CString;
 use std::fs::File;
 use std::io::Read;
 
-use anyhow::Error;
-
-use crate::utils::cstr_with_len;
 use crate::shader::ShaderError::CompilationError;
+use crate::utils::{cstr_to_str, cstr_with_len};
 
 #[derive(Debug)]
 pub enum ShaderError {
-    CompilationError,
+    CompilationError { error: String },
 }
 
 pub struct Shader {
@@ -69,26 +67,26 @@ fn shader_from_source(
                 error.as_ptr() as *mut gl::types::GLchar,
             )
         }
-        return Err(CompilationError {});
+        eprintln!("{}", error.to_string_lossy());
+        return Err(CompilationError {
+            error: cstr_to_str(&error),
+        });
     }
     println!("2");
     Ok(id)
 }
 
-pub fn create_program(dir: &str, vs: &str, fs: &str) -> ShaderProgram {
+pub fn create_program(dir: &str, vs: &str, fs: &str) -> Result<ShaderProgram, ShaderError> {
     let vertex_shader_path = format!("{}/{}", dir, vs);
     let frag_shader_path = format!("{}/{}", dir, fs);
-    let vertex_shader =
-        Shader::from_source(vertex_shader_path, gl::VERTEX_SHADER).expect("shader error");
-    let frag_shader =
-        Shader::from_source(frag_shader_path, gl::FRAGMENT_SHADER).expect("shader error");
+    let vertex_shader = Shader::from_source(vertex_shader_path, gl::VERTEX_SHADER)?;
+    let frag_shader = Shader::from_source(frag_shader_path, gl::FRAGMENT_SHADER)?;
     println!("{} {} {}", dir, vs, fs);
-    ShaderProgram::new(vertex_shader, frag_shader)
+    Ok(ShaderProgram::new(vertex_shader, frag_shader))
 }
 
 pub struct ShaderProgram {
     pub id: gl::types::GLuint,
-    link_status: gl::types::GLint,
 }
 
 impl ShaderProgram {
@@ -130,11 +128,7 @@ impl ShaderProgram {
             gl::DetachShader(id, frag_shader.id);
         }
 
-
-        Self {
-            id,
-            link_status: success,
-        }
+        Self { id }
     }
 }
 
@@ -151,13 +145,16 @@ pub struct ShaderService {
     dir: String,
     vs: String,
     fs: String,
-    pub program: ShaderProgram,
+    pub program: Option<ShaderProgram>,
 }
 
 impl ShaderService {
     pub fn new(dir: String, vs: String, fs: String) -> Self {
-        let program = create_program("shaders", "base.vert", "base.frag");
-        println!("new {}", program.id);
+        let program = match create_program("shaders", "base.vert", "base.frag") {
+            Ok(p) => Some(p),
+            _ => None,
+        };
+
         Self {
             dir,
             vs,
@@ -167,6 +164,13 @@ impl ShaderService {
     }
 
     pub fn reload(&mut self) {
-        self.program = create_program("shaders", "base.vert", "base.frag");
+        match create_program("shaders", "base.vert", "base.frag") {
+            Ok(new_program) => {
+                self.program = Some(new_program);
+            }
+            _ => {
+                println!("Compilation failed - not binding failed program");
+            }
+        };
     }
 }
