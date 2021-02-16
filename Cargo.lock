@@ -368,8 +368,6 @@ dependencies = [
 name = "glsl-watcher"
 version = "0.0.1"
 dependencies = [
- "anyhow",
- "gl",
  "notify",
 ]
 

@@ -16,7 +16,6 @@ use crate::buffer::gen_array_buffer;
 use crate::shader::ShaderService;
 
 mod buffer;
-mod opengl;
 mod shader;
 mod utils;
 
@@ -68,7 +67,8 @@ fn main() {
         "base.vert".to_string(),
         "base.frag".to_string(),
     );
-    let handle = thread::spawn(move || {
+
+    let _ = thread::spawn(move || {
         glsl_watcher::watch(tx, "shaders", "base.vert", "base.frag");
     });
 
@@ -91,12 +91,8 @@ fn main() {
 
         *control_flow = ControlFlow::Wait;
 
-        match &rx.try_recv() {
-            Ok(_) => {
-                println!("now");
-                shaders.reload();
-            }
-            Err(_) => {}
+        if rx.try_recv().is_ok() {
+            shaders.reload();
         }
 
         context.swap_buffers().unwrap();
@@ -107,7 +103,6 @@ fn main() {
                 ..
             } => {
                 println!("Bye now...");
-
                 *control_flow = ControlFlow::Exit
             }
 
@@ -129,6 +124,4 @@ fn main() {
             _ => (),
         }
     });
-
-    handle.join().unwrap();
 }
