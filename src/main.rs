@@ -5,7 +5,7 @@ extern crate winit;
 use std::sync::mpsc::channel;
 use std::thread;
 
-use glutin::ContextBuilder;
+use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -14,6 +14,8 @@ use winit::{
 
 use crate::buffer::gen_array_buffer;
 use crate::shader::ShaderService;
+use winit::platform::run_return::EventLoopExtRunReturn;
+use winit::window::Window;
 
 mod buffer;
 mod shader;
@@ -48,8 +50,14 @@ macro_rules! glchk {
     }
 }
 
+struct State {
+    width: i32,
+    height: i32,
+    is_running: bool,
+}
+
 fn main() {
-    let event_loop = EventLoop::new();
+    let mut event_loop = EventLoop::new();
     let window = WindowBuilder::new().with_title("Metazoa rs");
 
     let window_context = ContextBuilder::new()
@@ -59,6 +67,12 @@ fn main() {
     let context = unsafe { window_context.make_current().unwrap() };
 
     gl::load_with(|s| context.get_proc_address(s) as *const _);
+
+    let mut state = State {
+        width: 1092,
+        height: 768,
+        is_running: true,
+    };
 
     // shader compiler channel
     let (tx, rx) = channel();
@@ -82,50 +96,110 @@ fn main() {
 
     let vao = gen_array_buffer(&vertices);
 
-    unsafe {
-        gl::Viewport(0, 0, 640, 480);
-        gl::ClearColor(0.3, 0.3, 0.5, 1.0);
-    }
-
-    event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Poll;
-        *control_flow = ControlFlow::Wait;
-
+    while state.is_running {
         if rx.try_recv().is_ok() {
             shaders.reload();
         }
 
-        context.swap_buffers().unwrap();
+        event_loop.run_return(|event, _, control_flow| {
+            handle_events(
+                event,
+                control_flow,
+                &mut state,
+                &shaders,
+                &context,
+                vao);
+        });
 
-        match event {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
-                println!("Bye now...");
-                *control_flow = ControlFlow::Exit
-            }
+        render(&context, &state, &shaders, vao);
+    }
+}
 
-            Event::MainEventsCleared => {
-                if let Some(program) = &shaders.program {
-                    unsafe { gl::UseProgram(program.id) };
-                } else {
-                    unsafe { gl::UseProgram(0) };
-                }
+fn handle_events<T>(
+    event: Event<'_, T>,
+    control_flow: &mut ControlFlow,
+    state: &mut State,
+    shaders: &ShaderService,
+    context: &ContextWrapper<PossiblyCurrent, Window>,
+    vao: gl::types::GLuint,
+) {
+    *control_flow = ControlFlow::Poll;
+    *control_flow = ControlFlow::Wait;
 
-                unsafe {
-                    gl::Clear(gl::COLOR_BUFFER_BIT);
+    context.swap_buffers().unwrap();
 
-                    gl::BindVertexArray(vao);
-                    gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
-                }
-
-                unsafe { gl::UseProgram(0) };
-                context.swap_buffers().unwrap();
-            }
-
-            Event::RedrawRequested(_) => {}
-            _ => (),
+    match event {
+        Event::WindowEvent {
+            event: WindowEvent::CloseRequested,
+            ..
+        } => {
+            println!("Bye now...");
+            state.is_running = false;
+            *control_flow = ControlFlow::Exit
         }
-    });
+
+        Event::WindowEvent { event, .. } => {
+            match event {
+                // WindowEvent::CloseRequested => *is_running = false,
+                WindowEvent::Resized(size) => {
+                    let size = size.to_logical::<i32>(1.0);
+                    // bind size
+                    state.width = size.width;
+                    state.height = size.height;
+                }
+                _ => {}
+            }
+        }
+
+        Event::MainEventsCleared => {
+            if let Some(program) = &shaders.program {
+                unsafe { gl::UseProgram(program.id) };
+            } else {
+                unsafe { gl::UseProgram(0) };
+            }
+
+            unsafe {
+                gl::Clear(gl::COLOR_BUFFER_BIT);
+
+                gl::BindVertexArray(vao);
+                gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+            }
+
+            unsafe { gl::UseProgram(0) };
+            context.swap_buffers().unwrap();
+
+            *control_flow = ControlFlow::Exit;
+        }
+
+        Event::RedrawRequested(_) => {}
+        _ => (),
+    }
+}
+
+fn render(
+    context: &ContextWrapper<PossiblyCurrent, Window>,
+    state: &State,
+    shaders: &ShaderService,
+    vao: gl::types::GLuint,
+) {
+    unsafe {
+        gl::Viewport(0, 0, state.width, state.height);
+        gl::ClearColor(0.3, 0.3, 0.5, 1.0);
+    }
+
+    if let Some(program) = &shaders.program {
+        unsafe { gl::UseProgram(program.id) };
+    } else {
+        unsafe { gl::UseProgram(0) };
+    }
+
+    unsafe {
+        gl::Clear(gl::COLOR_BUFFER_BIT);
+
+        gl::BindVertexArray(vao);
+        gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+    }
+
+    unsafe { gl::UseProgram(0) };
+    context.swap_buffers().unwrap();
 }
