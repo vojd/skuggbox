@@ -102,13 +102,7 @@ fn main() {
         }
 
         event_loop.run_return(|event, _, control_flow| {
-            handle_events(
-                event,
-                control_flow,
-                &mut state,
-                &shaders,
-                &context,
-                vao);
+            handle_events(event, control_flow, &mut state, &shaders, &context, vao);
         });
 
         render(&context, &state, &shaders, vao);
