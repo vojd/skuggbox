@@ -586,18 +586,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "metazoa-rs"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "gl",
- "glsl-watcher",
- "glutin",
- "notify",
- "winit",
-]
-
-[[package]]
 name = "mio"
 version = "0.6.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -924,6 +912,18 @@ checksum = "5a9e7e0f2bfae24d8a5b5a66c5b257a83c7412304311512a0c054cd5e619da11"
 dependencies = [
  "lazy_static",
  "libc",
+]
+
+[[package]]
+name = "skuggbox-rs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "gl",
+ "glsl-watcher",
+ "glutin",
+ "notify",
+ "winit",
 ]
 
 [[package]]
