@@ -12,17 +12,19 @@ use winit::{
     window::WindowBuilder,
 };
 
-use crate::buffer::gen_array_buffer;
+use crate::buffer::{Buffer, BufferType};
 use crate::shader::ShaderService;
+use simple_logger::SimpleLogger;
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::Window;
 
 mod buffer;
 mod shader;
+mod uniforms;
 mod utils;
 
 #[allow(unused_macros)]
-macro_rules! glchk {
+macro_rules! gl_error {
     ($($s:stmt;)*) => {
         $(
             $s;
@@ -57,8 +59,10 @@ struct State {
 }
 
 fn main() {
+    SimpleLogger::new().init().unwrap();
+
     let mut event_loop = EventLoop::new();
-    let window = WindowBuilder::new().with_title("Metazoa rs");
+    let window = WindowBuilder::new().with_title("Skuggbox rs");
 
     let window_context = ContextBuilder::new()
         .build_windowed(window, &event_loop)
@@ -69,13 +73,13 @@ fn main() {
     gl::load_with(|s| context.get_proc_address(s) as *const _);
 
     let mut state = State {
-        width: 1092,
+        width: 1024,
         height: 768,
         is_running: true,
     };
 
     // shader compiler channel
-    let (tx, rx) = channel();
+    let (sender, receiver) = channel();
 
     let mut shaders = ShaderService::new(
         "shaders".to_string(),
@@ -84,7 +88,7 @@ fn main() {
     );
 
     let _ = thread::spawn(move || {
-        glsl_watcher::watch(tx, "shaders", "base.vert", "base.frag");
+        glsl_watcher::watch(sender, "shaders", "base.vert", "base.frag");
     });
 
     let vertices: Vec<f32> = vec![
@@ -94,18 +98,25 @@ fn main() {
         -1.0, -1.0, 0.0, // 3
     ];
 
-    let vao = gen_array_buffer(&vertices);
+    let vertex_buffer = Buffer::vertex_buffer(BufferType::VertexBuffer, &vertices);
 
     while state.is_running {
-        if rx.try_recv().is_ok() {
+        if receiver.try_recv().is_ok() {
             shaders.reload();
         }
 
         event_loop.run_return(|event, _, control_flow| {
-            handle_events(event, control_flow, &mut state, &shaders, &context, vao);
+            handle_events(
+                event,
+                control_flow,
+                &mut state,
+                &shaders,
+                &context,
+                &vertex_buffer,
+            );
         });
 
-        render(&context, &state, &shaders, vao);
+        render(&context, &state, &shaders, &vertex_buffer);
     }
 }
 
@@ -115,7 +126,7 @@ fn handle_events<T>(
     state: &mut State,
     shaders: &ShaderService,
     context: &ContextWrapper<PossiblyCurrent, Window>,
-    vao: gl::types::GLuint,
+    buffer: &Buffer,
 ) {
     *control_flow = ControlFlow::Poll;
     *control_flow = ControlFlow::Wait;
@@ -129,37 +140,37 @@ fn handle_events<T>(
         } => {
             println!("Bye now...");
             state.is_running = false;
+            buffer.delete();
             *control_flow = ControlFlow::Exit
         }
 
-        Event::WindowEvent { event, .. } => {
-            match event {
-                // WindowEvent::CloseRequested => *is_running = false,
-                WindowEvent::Resized(size) => {
-                    let size = size.to_logical::<i32>(1.0);
-                    // bind size
-                    state.width = size.width;
-                    state.height = size.height;
-                }
-                _ => {}
-            }
+        Event::WindowEvent {
+            event: WindowEvent::Resized(size),
+            ..
+        } => {
+            let size = size.to_logical::<i32>(1.0);
+            // bind size
+            state.width = size.width;
+            state.height = size.height;
         }
 
         Event::MainEventsCleared => {
-            if let Some(program) = &shaders.program {
-                unsafe { gl::UseProgram(program.id) };
-            } else {
-                unsafe { gl::UseProgram(0) };
-            }
-
             unsafe {
-                gl::Clear(gl::COLOR_BUFFER_BIT);
+                if !&shaders.program.is_some() {
+                    eprintln!("Found no shader program");
+                    return;
+                }
 
-                gl::BindVertexArray(vao);
+                let program = shaders.program.as_ref().unwrap();
+
+                gl::UseProgram(program.id);
+                gl::Clear(gl::COLOR_BUFFER_BIT);
+                buffer.bind();
                 gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+
+                gl::UseProgram(0);
             }
 
-            unsafe { gl::UseProgram(0) };
             context.swap_buffers().unwrap();
 
             *control_flow = ControlFlow::Exit;
@@ -174,7 +185,7 @@ fn render(
     context: &ContextWrapper<PossiblyCurrent, Window>,
     state: &State,
     shaders: &ShaderService,
-    vao: gl::types::GLuint,
+    buffer: &Buffer,
 ) {
     unsafe {
         gl::Viewport(0, 0, state.width, state.height);
@@ -189,8 +200,7 @@ fn render(
 
     unsafe {
         gl::Clear(gl::COLOR_BUFFER_BIT);
-
-        gl::BindVertexArray(vao);
+        buffer.bind();
         gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
     }
 
