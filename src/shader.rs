@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::Read;
 
 use crate::shader::ShaderError::CompilationError;
-use crate::uniforms::read_uniforms;
+use crate::uniforms::{read_uniforms, Uniform};
 use crate::utils::{cstr_to_str, cstr_with_len};
 use log::info;
 use std::path::PathBuf;
@@ -158,15 +158,13 @@ pub struct ShaderService {
     vs: PathBuf,
     fs: PathBuf,
     pub program: Option<ShaderProgram>,
+    uniforms: Vec<Uniform>,
 }
 
 impl ShaderService {
     pub fn new(shader_dir: String, vertex_src: String, frag_src: String) -> Self {
         let vs = PathBuf::from(format!("./{}/{}", shader_dir, vertex_src));
-        // let vs = PathBuf::from_path_buf(vertex_src_path).expect("valid Unicode path succeeded");
-
         let fs = PathBuf::from(format!("./{}/{}", shader_dir, frag_src));
-        // let fs =  PathBuf::from_path_buf(fragment_src_path).expect("valid Unicode path succeeded");
 
         let program = match create_program(vs.clone(), fs.clone()) {
             Ok(p) => Some(p),
@@ -178,6 +176,7 @@ impl ShaderService {
             vs,
             fs,
             program,
+            uniforms: vec![],
         }
     }
 
@@ -185,7 +184,9 @@ impl ShaderService {
         match create_program(self.vs.clone(), self.fs.clone()) {
             Ok(new_program) => {
                 self.program = Some(new_program);
-                read_uniforms(self.fs.clone());
+                let uniforms = read_uniforms(self.fs.clone());
+                println!("new uniforms");
+                dbg!(&uniforms);
             }
             _ => {
                 println!("Compilation failed - not binding failed program");
