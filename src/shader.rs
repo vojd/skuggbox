@@ -154,11 +154,10 @@ impl Drop for ShaderProgram {
 
 #[allow(dead_code)]
 pub struct ShaderService {
-    dir: String,
     vs: PathBuf,
     fs: PathBuf,
     pub program: Option<ShaderProgram>,
-    uniforms: Vec<Uniform>,
+    uniforms: Vec<Uniform>, // TODO: Unused
 }
 
 impl ShaderService {
@@ -172,7 +171,6 @@ impl ShaderService {
         };
 
         Self {
-            dir: shader_dir,
             vs,
             fs,
             program,

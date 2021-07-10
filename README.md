@@ -1,5 +1,17 @@
 # skuggbox-rs
 
+
+```bash
+
+cargo run --release
+
+## with cargo watch
+
+cargo install cargo-watch
+
+cargo watch --ignore 'shaders/*' -x "run --release"
+```
+
 ## Todo
 
 - [ ] Define project structure

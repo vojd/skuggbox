@@ -1,7 +1,7 @@
 extern crate gl;
 extern crate glutin;
 extern crate winit;
-
+use std::ffi::CString;
 use std::sync::mpsc::channel;
 use std::thread;
 
@@ -13,10 +13,13 @@ use winit::{
 };
 
 use crate::buffer::{Buffer, BufferType};
-use crate::shader::ShaderService;
+use crate::shader::{ShaderService, ShaderProgram};
 use simple_logger::SimpleLogger;
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::Window;
+use winit::event::{ScanCode, ElementState};
+
+use log::info;
 
 mod buffer;
 mod shader;
@@ -52,10 +55,19 @@ macro_rules! gl_error {
     }
 }
 
+#[derive(Default)]
 struct State {
     width: i32,
     height: i32,
     is_running: bool,
+
+    mouse_x: i32,
+    mouse_y: i32,
+
+    mouse_left_pressed: bool,
+    mouse_right_pressed: bool,
+
+    dev_mode: bool,
 }
 
 fn main() {
@@ -76,6 +88,11 @@ fn main() {
         width: 1024,
         height: 768,
         is_running: true,
+        mouse_x: 0,
+        mouse_y: 0,
+        mouse_left_pressed: false,
+        mouse_right_pressed: false,
+        dev_mode: false,
     };
 
     // shader compiler channel
@@ -120,6 +137,13 @@ fn main() {
     }
 }
 
+#[allow(temporary_cstring_as_ptr)]
+fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
+    unsafe {
+        gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr())
+    }
+}
+
 fn handle_events<T>(
     event: Event<'_, T>,
     control_flow: &mut ControlFlow,
@@ -134,24 +158,48 @@ fn handle_events<T>(
     context.swap_buffers().unwrap();
 
     match event {
-        Event::WindowEvent {
-            event: WindowEvent::CloseRequested,
-            ..
-        } => {
-            println!("Bye now...");
-            state.is_running = false;
-            buffer.delete();
-            *control_flow = ControlFlow::Exit
-        }
 
-        Event::WindowEvent {
-            event: WindowEvent::Resized(size),
-            ..
-        } => {
-            let size = size.to_logical::<i32>(1.0);
-            // bind size
-            state.width = size.width;
-            state.height = size.height;
+        Event::WindowEvent { event, .. } => {
+            match event {
+                WindowEvent::CloseRequested => {
+                    println!("Bye now...");
+                    state.is_running = false;
+                    buffer.delete();
+                    *control_flow = ControlFlow::Exit
+                }
+
+                WindowEvent::Resized(size) => {
+                    let size = size.to_logical::<i32>(1.0);
+                    // bind size
+                    state.width = size.width;
+                    state.height = size.height;
+                }
+
+                WindowEvent::Moved(pos) => {
+                    state.mouse_x = pos.x;
+                    state.mouse_y = pos.y;
+                }
+
+                WindowEvent::MouseInput {button, state, ..} => {
+                    info!("mouse input {:?} {:?}", button, state);
+                }
+
+                WindowEvent::KeyboardInput { input, .. } => {
+                    if input.state == ElementState::Pressed {
+                        if let Some(keycode) = input.virtual_keycode {
+
+                        }
+
+                    }
+                    if let Some(keycode) = input.virtual_keycode {
+                        info!("pressed {:?}", keycode)
+
+
+                    }
+                }
+
+                _ => {}
+            }
         }
 
         Event::MainEventsCleared => {
@@ -164,6 +212,14 @@ fn handle_events<T>(
                 let program = shaders.program.as_ref().unwrap();
 
                 gl::UseProgram(program.id);
+
+                // push uniform values to shader
+                let location = get_uniform_location(program, "iTime");
+                gl::Uniform1f(location, 0.0);
+
+                let location = get_uniform_location(program, "iResolution");
+                gl::Uniform2f(location, state.width as f32, state.height as f32);
+
                 gl::Clear(gl::COLOR_BUFFER_BIT);
                 buffer.bind();
                 gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);

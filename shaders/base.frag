@@ -4,7 +4,7 @@ in vec2 Position;
 out vec4 Color;
 
 uniform float iTime;
-vec2 iResolution = vec2(1024, 768);
+uniform vec2 iResolution;
 
 uniform vec2 value;
 uniform float hello;
@@ -49,4 +49,5 @@ void main() {
     vec3 fc = clamp(vec3(fog),-0.,1.);
 
     Color = vec4(fc.x*0.75,fc.y*0.95,fc.z*1.,0.0);
+//    Color = vec4(iTime / 100.0);
 }
