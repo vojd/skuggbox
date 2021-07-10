@@ -1,6 +1,5 @@
 # skuggbox-rs
 
-
 ```bash
 
 cargo run --release
@@ -8,9 +7,11 @@ cargo run --release
 ## with cargo watch
 
 cargo install cargo-watch
-
-cargo watch --ignore 'shaders/*' -x "run --release"
+cargo watch -x "run --release"
+ 
 ```
+
+See file `.ignore` for directories and files ignored by `cargo watch`
 
 ## Todo
 
@@ -38,13 +39,6 @@ root object
 
 ### Run
 
-```bash
-set CARGO_INCREMENTAL=1 && set RUSTFLAGS=-C lto=off -C opt-level=z -C inline-threshold=275 && cargo watch -x "run --release"  --ignore './shaders/*'
-```
-
-```shell
-cargo test
-```
 
 
 ### Scratch pad

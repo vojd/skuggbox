@@ -19,6 +19,16 @@ fn get_buffer_type(buffer_type: BufferType) -> gl::types::GLenum {
 }
 
 impl Buffer {
+    pub fn new_vertex_buffer() -> Self {
+        let vertices: Vec<f32> = vec![
+            1.0, 1.0, 0.0, // 0
+            -1.0, 1.0, 0.0, // 1
+            1.0, -1.0, 0.0, // 2
+            -1.0, -1.0, 0.0, // 3
+        ];
+        Buffer::vertex_buffer(BufferType::VertexBuffer, &vertices)
+    }
+
     pub fn vertex_buffer(buffer_type: BufferType, vertices: &[f32]) -> Self {
         let buf_type = get_buffer_type(buffer_type);
         let size = (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr;
