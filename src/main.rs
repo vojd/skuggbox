@@ -12,7 +12,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-use crate::buffer::{Buffer};
+use crate::buffer::Buffer;
 use crate::shader::{ShaderProgram, ShaderService};
 use simple_logger::SimpleLogger;
 use winit::event::{ElementState, VirtualKeyCode};
@@ -129,8 +129,6 @@ fn main() {
             PlayMode::Paused => {}
         }
 
-
-
         event_loop.run_return(|event, _, control_flow| {
             handle_events(
                 event,
@@ -141,7 +139,6 @@ fn main() {
                 &vertex_buffer,
             );
         });
-
 
         render(&context, &state, &shaders, &vertex_buffer);
 
@@ -220,8 +217,6 @@ fn handle_events<T>(
         Event::RedrawRequested(_) => {}
         _ => (),
     }
-
-
 }
 
 fn render(
