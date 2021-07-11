@@ -129,6 +129,8 @@ fn main() {
             PlayMode::Paused => {}
         }
 
+
+
         event_loop.run_return(|event, _, control_flow| {
             handle_events(
                 event,
@@ -139,6 +141,9 @@ fn main() {
                 &vertex_buffer,
             );
         });
+
+
+        render(&context, &state, &shaders, &vertex_buffer);
 
         timer.stop();
     }
@@ -158,8 +163,6 @@ fn handle_events<T>(
     buffer: &Buffer,
 ) {
     *control_flow = ControlFlow::Poll;
-    *control_flow = ControlFlow::Wait;
-
     context.swap_buffers().unwrap();
 
     match event {
@@ -211,9 +214,6 @@ fn handle_events<T>(
 
         Event::MainEventsCleared => {
             state.current_time += state.delta_time;
-
-            context.swap_buffers().unwrap();
-
             *control_flow = ControlFlow::Exit;
         }
 
@@ -221,7 +221,7 @@ fn handle_events<T>(
         _ => (),
     }
 
-    render(&context, &state, &shaders, &buffer);
+
 }
 
 fn render(
