@@ -19,7 +19,7 @@ use winit::event::{ElementState, VirtualKeyCode};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::Window;
 
-use crate::state::PlayMode;
+use crate::state::{seek, PlayMode, PlaybackControl};
 use crate::timer::Timer;
 use log::info;
 
@@ -66,7 +66,7 @@ struct State {
     is_running: bool,
 
     delta_time: f32,
-    current_time: f32,
+    playback_time: f32,
 
     mouse_x: i32,
     mouse_y: i32,
@@ -95,7 +95,7 @@ fn main() {
         height: 768,
         is_running: true,
         delta_time: 0.0,
-        current_time: 0.0,
+        playback_time: 0.0,
         mouse_x: 0,
         mouse_y: 0,
         play_mode: PlayMode::Playing,
@@ -121,12 +121,9 @@ fn main() {
             shaders.reload();
         }
 
-        match state.play_mode {
-            PlayMode::Playing => {
-                timer.start();
-                state.delta_time = timer.delta_time;
-            }
-            PlayMode::Paused => {}
+        if matches!(state.play_mode, PlayMode::Playing) {
+            timer.start();
+            state.delta_time = timer.delta_time;
         }
 
         event_loop.run_return(|event, _, control_flow| {
@@ -134,7 +131,7 @@ fn main() {
                 event,
                 control_flow,
                 &mut state,
-                &shaders,
+                &mut timer,
                 &context,
                 &vertex_buffer,
             );
@@ -155,7 +152,7 @@ fn handle_events<T>(
     event: Event<'_, T>,
     control_flow: &mut ControlFlow,
     state: &mut State,
-    shaders: &ShaderService,
+    timer: &mut Timer,
     context: &ContextWrapper<PossiblyCurrent, Window>,
     buffer: &Buffer,
 ) {
@@ -192,10 +189,28 @@ fn handle_events<T>(
                     if input.state == ElementState::Pressed {
                         if let Some(keycode) = input.virtual_keycode {
                             if keycode == VirtualKeyCode::Space {
+                                info!("toggle playmode");
                                 state.play_mode = match state.play_mode {
                                     PlayMode::Playing => PlayMode::Paused,
-                                    PlayMode::Paused => PlayMode::Playing,
+                                    PlayMode::Paused => {
+                                        timer.start();
+                                        PlayMode::Playing
+                                    }
                                 }
+                            }
+
+                            if keycode == VirtualKeyCode::Right {
+                                state.playback_time =
+                                    seek(state.playback_time, PlaybackControl::Forward(1.0))
+                            }
+
+                            if keycode == VirtualKeyCode::Left {
+                                state.playback_time =
+                                    seek(state.playback_time, PlaybackControl::Rewind(1.0))
+                            }
+
+                            if keycode == VirtualKeyCode::Key0 {
+                                state.playback_time = 0.0;
                             }
                         }
                     }
@@ -210,7 +225,10 @@ fn handle_events<T>(
         }
 
         Event::MainEventsCleared => {
-            state.current_time += state.delta_time;
+            if matches!(state.play_mode, PlayMode::Playing) {
+                state.playback_time += state.delta_time;
+            }
+
             *control_flow = ControlFlow::Exit;
         }
 
@@ -242,8 +260,9 @@ fn render(
         gl::UseProgram(program.id);
 
         // push uniform values to shader
+
         let location = get_uniform_location(program, "iTime");
-        gl::Uniform1f(location, state.current_time);
+        gl::Uniform1f(location, state.playback_time);
 
         let location = get_uniform_location(program, "iResolution");
         gl::Uniform2f(location, state.width as f32, state.height as f32);
