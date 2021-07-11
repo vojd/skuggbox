@@ -105,7 +105,7 @@ fn extract_uniform(line: String) -> Result<Uniform, UniformError> {
     }
 
     let mut uniform_name = parts.get(2).ok_or(UniformError::ParseError)?.to_string();
-    if uniform_name.ends_with(";") {
+    if uniform_name.ends_with(';') {
         uniform_name.truncate(uniform_name.len() - 1)
     }
     let u_type = parts.get(1).ok_or(UniformError::ParseError)?;
