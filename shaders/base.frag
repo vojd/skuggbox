@@ -1,7 +1,8 @@
 #version 330 core
 
-in vec2 Position;
-out vec4 Color;
+#pragma include(test_include.glsl);
+in vec2 fragCoord;
+out vec4 fragColor;
 
 uniform float iTime;
 uniform vec2 iResolution;
@@ -105,5 +106,5 @@ void main(void) {
     // gamma correction
     color = pow(color, vec3(1.0/2.4));
 
-    Color = vec4(color, 1.0);
+    fragColor = vec4(color, 1.0);
 }

@@ -228,8 +228,9 @@ fn handle_events<T>(
                 }
 
                 WindowEvent::MouseWheel { delta, .. } => {
-                    if let MouseScrollDelta::LineDelta(_x, y) = delta {
-                        world_state.camera.zoom += y;
+                    world_state.camera.zoom = match delta {
+                        MouseScrollDelta::LineDelta(_, y) => y,
+                        MouseScrollDelta::PixelDelta(pos) => pos.y as f32,
                     }
                 }
 

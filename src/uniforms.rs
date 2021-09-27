@@ -120,7 +120,7 @@ fn extract_uniform(line: String) -> Result<Uniform, UniformError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::uniforms::{extract_uniform, is_uniform, GLSLType};
+    use super::{extract_uniform, is_uniform, GLSLType};
     use std::str::FromStr;
 
     #[test]

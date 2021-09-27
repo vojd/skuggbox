@@ -4,9 +4,10 @@ use std::io::Read;
 
 use crate::shader::ShaderError::CompilationError;
 use crate::uniforms::{read_uniforms, Uniform};
-use crate::utils::{cstr_to_str, cstr_with_len};
+use crate::utils::{cstr_to_str, cstr_with_len, pragma_shader_name};
 use log::info;
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum ShaderError {
@@ -29,10 +30,44 @@ impl Shader {
 }
 
 fn read_from_file(source_file: PathBuf) -> CString {
-    let mut file = File::open(source_file).expect("Failed to read file");
+    let mut file = File::open(source_file.clone()).expect("Failed to read file");
     let mut s = String::new();
     file.read_to_string(&mut s).unwrap();
-    CString::new(s).unwrap()
+
+    // Find potential include files
+    let mut includes = HashMap::<&str, String>::new();
+    for line in s.lines() {
+        let l = line.trim_start();
+        // find import line
+        if l.starts_with("#pragma") && l.contains("include") {
+            let shader_name = pragma_shader_name(l);
+            let path = source_file
+                .parent()
+                .expect("Could not read path from shader source file");
+            let import_shader_file = path.join(Path::new(shader_name.as_str()));
+
+            let mut imported_file = File::open(import_shader_file).expect("Failed to import");
+            let mut k = String::new();
+            imported_file.read_to_string(&mut k).unwrap();
+
+            includes.insert(line, k);
+        }
+    }
+
+    // Do the actual inclusion
+    let k: String = s
+        .lines()
+        .map(|line| {
+            if includes.contains_key(line) {
+                info!("including {:?}", line);
+                format!("{}\n", includes.get(line).unwrap())
+            } else {
+                format!("{}\n", line)
+            }
+        })
+        .collect();
+
+    CString::new(k).unwrap()
 }
 
 fn shader_from_source(
@@ -40,6 +75,8 @@ fn shader_from_source(
     shader_type: gl::types::GLuint,
 ) -> anyhow::Result<gl::types::GLuint, ShaderError> {
     let src = read_from_file(source_file);
+
+    // check for includes
 
     let id = unsafe { gl::CreateShader(shader_type) };
 
@@ -183,11 +220,11 @@ impl ShaderService {
             Ok(new_program) => {
                 self.program = Some(new_program);
                 let uniforms = read_uniforms(self.fs.clone());
-                println!("new uniforms");
+                info!("Found uniforms");
                 dbg!(&uniforms);
             }
             _ => {
-                println!("Compilation failed - not binding failed program");
+                eprintln!("Compilation failed - not binding failed program");
             }
         };
     }
