@@ -9,20 +9,13 @@ uniform vec2 iResolution;
 // mx, my, zoom_level
 uniform vec3 iMouse;
 
-uniform vec2 mouseCursor;
-
-uniform vec3 cameraPosition;
-uniform vec3 cameraTarget;
-
-uniform mat4 projection;
-uniform mat4 view;
-
 uniform vec3 camDir;
 uniform vec3 camPos;
 
-#define MAXD    200.
-#define STEPS   100
-#define EPS     0.002
+#define MAXD 200.
+#define STEPS 100
+#define EPS  0.002
+#define PI 3.141592
 
 float smin(float a, float b, float k) {
     float h = max(k-abs(a-b), 0.0)/k;
@@ -30,8 +23,7 @@ float smin(float a, float b, float k) {
 }
 
 float map(vec3 p) {
-    return sdBox(p, vec3(0.5));
-
+    return sdBox(p, vec3(1.0));
 }
 
 vec3 normal(vec3 pos) {
@@ -56,41 +48,90 @@ vec3 background(vec3 rd) {
     return vec3(0.3, 0.2, 0.1) + rd.z * 0.5;
 }
 
+float random(vec2 co) {
+    float a = 12.9898;
+    float b = 78.233;
+    float c = 43758.5453;
+    float dt= dot(co.xy ,vec2(a,b));
+    float sn= mod(dt,3.14);
+    return fract(sin(sn) * c);
+}
+
+float fog(const float dist, const float density) {
+    const float LOG2 = -1.442695;
+    float d = density * dist;
+    return 1.0 - clamp(exp2(d * d * LOG2), 0.0, 1.0);
+}
+
+float intersectPlane(vec3 ro, vec3 rd, vec3 nor, float dist) {
+    float denom = dot(rd, nor);
+    float t = -(dot(ro, nor) + dist) / denom;
+    return t;
+}
+
+// Source: http://www.iquilezles.org/www/articles/palettes/palettes.htm
+vec3 palette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 bg(vec3 ro, vec3 rd) {
+    vec3 col = 0.1 + (
+    palette(clamp((random(rd.xz + sin(iTime * 0.1)) * 0.5 + 0.5) * 0.035 - rd.y * 0.5 + 0.35, -1.0, 1.0)
+    , vec3(0.5, 0.45, 0.55)
+    , vec3(0.5, 0.5, 0.5)
+    , vec3(1.05, 1.0, 1.0)
+    , vec3(0.275, 0.2, 0.19)
+    )
+    );
+
+
+    float t = intersectPlane(ro, rd, vec3(0, 1, 0), 0.5);
+
+    if (t > 0.0) {
+        vec3 p = ro + rd * t;
+        float g = (1.0 - pow(abs(sin(p.x) * cos(p.z)), 0.25));
+
+        col += (1.0 - fog
+        (t, 0.04)) * g * vec3(5, 4, 2) * 0.075;
+        col += (1.0 - fog
+        (t, 0.04)) * g * vec3(5, 4, 2) * 0.075;
+    }
+
+    return col;
+}
+
+
+mat3 camera(vec3 cameraPos, vec3 lookAtPoint) {
+    vec3 cd = normalize(lookAtPoint - cameraPos); // camera direction
+    vec3 cr = normalize(cross(vec3(0, 1, 0), cd)); // camera right
+    vec3 cu = normalize(cross(cd, cr)); // camera up
+
+    return mat3(-cr, cu, -cd);
+}
+
+mat2 rotate2d(float theta) {
+    float s = sin(theta), c = cos(theta);
+    return mat2(c, -s, s, c);
+}
+
 void main(void) {
     vec2 uv = (2.*gl_FragCoord.xy-iResolution.xy)/iResolution.y;
+    vec2 mouseUV = iMouse.xy/iResolution.xy; // Range: <0, 1>
 
-    // camera
-    vec2 mouse = iMouse.xy / iResolution.xy;
+    vec3 lp = vec3(0, 0.0, 0.0);
+//    vec3 ro = vec3(2, 2, -2);
+    vec3 ro = camPos;
 
-    vec3 cameraAt 	= camPos;
+    float cameraRadius = 2. + iMouse.z * 0.5;
+    ro.yz = ro.yz * cameraRadius * rotate2d(mix(PI/2., 0., mouseUV.y));
+    ro.xz = ro.xz * rotate2d(mix(-PI, PI, mouseUV.x)) + vec2(lp.x, lp.z);
 
-    float angleX =  6.28 * mouse.x;
-    float angleY = 6.28 * mouse.y;
-    vec3 cameraPos	= (vec3(sin(angleX)*cos(angleY), sin(angleY), cos(angleX)*cos(angleY))) * 3.0;
-
-    vec3 cameraFwd = normalize(cameraAt - cameraPos);
-    vec3 cameraLeft = normalize(cross(normalize(cameraAt - cameraPos), vec3(0.0,sign(cos(angleY)),0.0)));
-    vec3 cameraUp = normalize(cross(cameraLeft, cameraFwd));
-
-    float cameraViewWidth	= 6.0;
-    float cameraViewHeight	= cameraViewWidth * iResolution.y / iResolution.x;
-    float cameraDistance	= 6.0 + iMouse.z;
-
-    vec2 rawPercent = (gl_FragCoord.xy / iResolution.xy);
-    vec2 percent = rawPercent - vec2(0.5,0.5);
-
-    vec3 rayTarget = (cameraFwd * vec3(cameraDistance,cameraDistance,cameraDistance))
-    - (cameraLeft * percent.x * cameraViewWidth)
-    + (cameraUp * percent.y * cameraViewHeight);
-
-    vec3 rd = normalize(rayTarget);
-    vec3 ro = cameraPos;
-
-    vec3 color = vec3(0.1, 0.2, 0.3);
+    vec3 rd = camera(ro, lp) * normalize(vec3(uv, -1));
+    vec3 color = bg(ro, rd);
 
     vec2 hit = intersect(ro, rd);
     if (hit.x < MAXD) {
-        vec3 pos = hit.x * rd + ro;
+        vec3 pos = ro + rd * hit.x;
         vec3 n = normal(pos);
 
         // add simple lighting and color based on reflection
@@ -100,6 +141,5 @@ void main(void) {
 
     // gamma correction
     color = pow(color, vec3(1.0/2.4));
-
     fragColor = vec4(color, 1.0);
 }

@@ -72,7 +72,7 @@ struct Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            pos: Vec3::new(0.0, 1.0, -1.0),
+            pos: Vec3::new(02.0, 2.0, -2.0),
             target: Vec3::new(0.0, 0.0, 0.0),
             speed: 1.0,
             zoom: 0.0,
@@ -99,6 +99,7 @@ struct WorldState {
 
     is_lmb_down: bool,
     is_rmb_down: bool,
+    is_first_rmb_click: bool,
     camera: Camera,
 }
 
@@ -129,6 +130,7 @@ fn main() {
         play_mode: PlayMode::Playing,
         is_lmb_down: false,
         is_rmb_down: false,
+        is_first_rmb_click: false,
         camera: Camera::default(),
     };
 
@@ -209,10 +211,19 @@ fn handle_events<T>(
 
                 WindowEvent::CursorMoved { position, .. } => {
                     if world_state.is_rmb_down {
+                        // TODO: when pressing the rmb we want to make sure the camera doesn't jump
+                        if world_state.is_first_rmb_click {
+                            world_state.mouse_pos = Vec2::new(position.x as f32, position.y as f32);
+
+                            world_state.is_first_rmb_click = false;
+                        }
+
                         world_state.mouse_delta = Vec2::new(
                             position.x as f32 - world_state.mouse_pos.x,
                             world_state.mouse_pos.y - position.y as f32,
                         );
+
+                        world_state.mouse_pos = Vec2::new(position.x as f32, position.y as f32);
                     }
                 }
 
@@ -225,13 +236,15 @@ fn handle_events<T>(
                         "l: {:?}, r: {:?}",
                         world_state.is_lmb_down, world_state.is_rmb_down
                     );
+
+                    world_state.is_first_rmb_click = world_state.is_rmb_down;
                 }
 
                 WindowEvent::MouseWheel { delta, .. } => {
-                    world_state.camera.zoom = match delta {
+                    world_state.camera.zoom += match delta {
                         MouseScrollDelta::LineDelta(_, y) => y,
                         MouseScrollDelta::PixelDelta(pos) => pos.y as f32,
-                    }
+                    };
                 }
 
                 WindowEvent::KeyboardInput { input, .. } => {
@@ -342,8 +355,8 @@ fn render(
         let location = get_uniform_location(program, "iMouse");
         gl::Uniform3f(
             location,
-            state.mouse_delta.x,
-            state.mouse_delta.y,
+            state.mouse_pos.x,
+            state.mouse_pos.y,
             state.camera.zoom,
         );
 
