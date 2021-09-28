@@ -62,9 +62,35 @@ macro_rules! gl_error {
 }
 
 #[derive(Debug)]
+struct Mouse {
+    pos: Vec2,
+    last_pos: Vec2,
+    delta: Vec2,
+
+    is_lmb_down: bool,
+    is_rmb_down: bool,
+    is_first_rmb_click: bool,
+}
+
+impl Default for Mouse {
+    fn default() -> Self {
+        Self {
+            pos: Vec2::new(0.0, 0.0),
+            last_pos: Vec2::ZERO,
+            delta: Vec2::new(0.0, 0.0),
+
+            is_lmb_down: false,
+            is_rmb_down: false,
+            is_first_rmb_click: false,
+        }
+    }
+}
+
+#[derive(Debug)]
 struct Camera {
     pos: Vec3,
     target: Vec3,
+    angle: Vec2,
     speed: f32,
     zoom: f32,
 }
@@ -74,6 +100,7 @@ impl Default for Camera {
         Self {
             pos: Vec3::new(02.0, 2.0, -2.0),
             target: Vec3::new(0.0, 0.0, 0.0),
+            angle: Vec2::ZERO,
             speed: 1.0,
             zoom: 0.0,
         }
@@ -86,20 +113,12 @@ struct WorldState {
     height: i32,
     /// App state - is the application running?
     is_running: bool,
-
     delta_time: f32,
     playback_time: f32,
-
-    mouse_pos: Vec2,
-    mouse_delta: Vec2,
-    zoom_level: f32,
-
+    mouse: Mouse,
     /// Running or paused?
     play_mode: PlayMode,
 
-    is_lmb_down: bool,
-    is_rmb_down: bool,
-    is_first_rmb_click: bool,
     camera: Camera,
 }
 
@@ -124,13 +143,8 @@ fn main() {
         is_running: true,
         delta_time: 0.0,
         playback_time: 0.0,
-        mouse_pos: Vec2::new(0.0, 0.0),
-        mouse_delta: Default::default(),
-        zoom_level: 0.0,
+        mouse: Mouse::default(),
         play_mode: PlayMode::Playing,
-        is_lmb_down: false,
-        is_rmb_down: false,
-        is_first_rmb_click: false,
         camera: Camera::default(),
     };
 
@@ -210,34 +224,29 @@ fn handle_events<T>(
                 }
 
                 WindowEvent::CursorMoved { position, .. } => {
-                    if world_state.is_rmb_down {
-                        // TODO: when pressing the rmb we want to make sure the camera doesn't jump
-                        if world_state.is_first_rmb_click {
-                            world_state.mouse_pos = Vec2::new(position.x as f32, position.y as f32);
-
-                            world_state.is_first_rmb_click = false;
-                        }
-
-                        world_state.mouse_delta = Vec2::new(
-                            position.x as f32 - world_state.mouse_pos.x,
-                            world_state.mouse_pos.y - position.y as f32,
+                    if world_state.mouse.is_rmb_down {
+                        world_state.mouse.delta = Vec2::new(
+                            position.x as f32 - world_state.mouse.pos.x,
+                            world_state.mouse.pos.y - position.y as f32,
                         );
 
-                        world_state.mouse_pos = Vec2::new(position.x as f32, position.y as f32);
+                        // reset mouse delta so we don't get jumps when we
+                        if world_state.mouse.is_first_rmb_click {
+                            world_state.mouse.delta = Vec2::ZERO;
+                            world_state.mouse.is_first_rmb_click = false;
+                        }
+                        world_state.mouse.pos = Vec2::new(position.x as f32, position.y as f32);
+                        world_state.camera.angle += world_state.mouse.delta;
                     }
                 }
 
                 WindowEvent::MouseInput { button, state, .. } => {
-                    world_state.is_lmb_down =
+                    world_state.mouse.is_lmb_down =
                         button == MouseButton::Left && state == ElementState::Pressed;
-                    world_state.is_rmb_down =
+                    world_state.mouse.is_rmb_down =
                         button == MouseButton::Right && state == ElementState::Pressed;
-                    debug!(
-                        "l: {:?}, r: {:?}",
-                        world_state.is_lmb_down, world_state.is_rmb_down
-                    );
 
-                    world_state.is_first_rmb_click = world_state.is_rmb_down;
+                    world_state.mouse.is_first_rmb_click = world_state.mouse.is_rmb_down;
                 }
 
                 WindowEvent::MouseWheel { delta, .. } => {
@@ -251,7 +260,6 @@ fn handle_events<T>(
                     if input.state == ElementState::Pressed {
                         if let Some(keycode) = input.virtual_keycode {
                             if keycode == VirtualKeyCode::Space {
-                                debug!("toggle playmode");
                                 world_state.play_mode = match world_state.play_mode {
                                     PlayMode::Playing => PlayMode::Paused,
                                     PlayMode::Paused => {
@@ -277,24 +285,28 @@ fn handle_events<T>(
 
                             if keycode == VirtualKeyCode::A {
                                 world_state.camera.pos.x -= 0.5;
+                                world_state.camera.target.x += 0.5;
                             }
 
                             if keycode == VirtualKeyCode::D {
                                 world_state.camera.pos.x += 0.5;
+                                world_state.camera.target.x -= 0.5;
                             }
 
                             if keycode == VirtualKeyCode::W {
                                 world_state.camera.pos.y -= 0.5;
+                                world_state.camera.target.y += 0.5;
                             }
 
                             if keycode == VirtualKeyCode::S {
                                 world_state.camera.pos.y += 0.5;
+                                world_state.camera.target.y -= 0.5;
                             }
 
                             if keycode == VirtualKeyCode::Period {
                                 // reset all camera settings
                                 world_state.camera = Camera::default();
-                                world_state.mouse_delta = Vec2::new(0.0, 0.0);
+                                world_state.mouse.delta = Vec2::new(0.0, 0.0);
                             }
                         }
                     }
@@ -355,18 +367,37 @@ fn render(
         let location = get_uniform_location(program, "iMouse");
         gl::Uniform3f(
             location,
-            state.mouse_pos.x,
-            state.mouse_pos.y,
+            state.mouse.pos.x,
+            state.mouse.pos.y,
             state.camera.zoom,
         );
 
-        let location = get_uniform_location(program, "camPos");
+        let location = get_uniform_location(program, "uCamPos");
         gl::Uniform3f(
             location,
             state.camera.pos.x,
             state.camera.pos.y,
             state.camera.pos.z,
         );
+
+        let location = get_uniform_location(program, "uCamPos");
+        gl::Uniform3f(
+            location,
+            state.camera.pos.x,
+            state.camera.pos.y,
+            state.camera.pos.z,
+        );
+
+        let location = get_uniform_location(program, "uCamTarget");
+        gl::Uniform3f(
+            location,
+            state.camera.target.x,
+            state.camera.target.y,
+            state.camera.target.z,
+        );
+
+        let location = get_uniform_location(program, "uCamAngle");
+        gl::Uniform2f(location, state.camera.angle.x, state.camera.angle.y);
 
         gl::Clear(gl::COLOR_BUFFER_BIT);
         buffer.bind();

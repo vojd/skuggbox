@@ -9,8 +9,10 @@ uniform vec2 iResolution;
 // mx, my, zoom_level
 uniform vec3 iMouse;
 
-uniform vec3 camDir;
-uniform vec3 camPos;
+uniform vec3 uCamDir;
+uniform vec3 uCamPos;
+uniform vec3 uCamTarget;
+uniform vec2 uCamAngle;
 
 #define MAXD 200.
 #define STEPS 100
@@ -100,13 +102,12 @@ vec3 bg(vec3 ro, vec3 rd) {
     return col;
 }
 
-
 mat3 camera(vec3 cameraPos, vec3 lookAtPoint) {
-    vec3 cd = normalize(lookAtPoint - cameraPos); // camera direction
-    vec3 cr = normalize(cross(vec3(0, 1, 0), cd)); // camera right
-    vec3 cu = normalize(cross(cd, cr)); // camera up
+    vec3 cameraDir = normalize(lookAtPoint - cameraPos); // camera direction
+    vec3 cameraRight = normalize(cross(vec3(0, 1, 0), cameraDir)); // camera right
+    vec3 cameraUp = normalize(cross(cameraDir, cameraRight)); // camera up
 
-    return mat3(-cr, cu, -cd);
+    return mat3(-cameraRight, cameraUp, -cameraDir);
 }
 
 mat2 rotate2d(float theta) {
@@ -116,12 +117,12 @@ mat2 rotate2d(float theta) {
 
 void main(void) {
     vec2 uv = (2.*gl_FragCoord.xy-iResolution.xy)/iResolution.y;
-    vec2 mouseUV = iMouse.xy/iResolution.xy; // Range: <0, 1>
+    vec2 mouseUV = uCamAngle / iResolution.xy;
 
-    vec3 lp = vec3(0, 0.0, 0.0);
-//    vec3 ro = vec3(2, 2, -2);
-    vec3 ro = camPos;
+    vec3 lp = uCamTarget;
+    vec3 ro = uCamPos;
 
+    // set camera radius by scroll wheel
     float cameraRadius = 2. + iMouse.z * 0.5;
     ro.yz = ro.yz * cameraRadius * rotate2d(mix(PI/2., 0., mouseUV.y));
     ro.xz = ro.xz * rotate2d(mix(-PI, PI, mouseUV.x)) + vec2(lp.x, lp.z);
