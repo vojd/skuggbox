@@ -3,7 +3,7 @@ extern crate glutin;
 extern crate winit;
 use std::ffi::CString;
 use std::sync::mpsc::channel;
-use std::thread;
+use std::{env, process, thread};
 
 use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
 use winit::{
@@ -24,6 +24,8 @@ use crate::timer::Timer;
 use glam::{Vec2, Vec3};
 use glutin::event::{MouseButton, MouseScrollDelta};
 use log::debug;
+use log::info;
+use log::error;
 
 mod buffer;
 mod shader;
@@ -124,10 +126,19 @@ struct WorldState {
 
 fn main() {
     SimpleLogger::new().init().unwrap();
+
+    // collect and verify arguments
+    let args: Vec<String> = env::args().collect();
+    if args.len() <= 1 {
+        error!("ERROR: No shader provided on the command line");
+        info!("Syntax: skuggbox [FILE]...");
+        process::exit(1);
+    }
+
     let mut timer = Timer::new();
 
     let mut event_loop = EventLoop::new();
-    let window = WindowBuilder::new().with_title("Skuggbox rs");
+    let window = WindowBuilder::new().with_title("Skuggbox");
 
     let window_context = ContextBuilder::new()
         .build_windowed(window, &event_loop)
