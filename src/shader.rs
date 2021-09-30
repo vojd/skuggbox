@@ -4,13 +4,15 @@ use std::io::Read;
 
 use crate::shader::ShaderError::CompilationError;
 use crate::uniforms::{read_uniforms, Uniform};
-use crate::utils::{cstr_to_str, cstr_with_len};
+use crate::utils::{cstr_to_str, cstr_with_len, pragma_shader_name};
 use log::info;
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum ShaderError {
     CompilationError { error: String },
+    FileError { error: String },
 }
 
 #[derive(Debug)]
@@ -28,23 +30,77 @@ impl Shader {
     }
 }
 
-fn read_from_file(source_file: PathBuf) -> CString {
-    let mut file = File::open(source_file).expect("Failed to read file");
+fn read_shader_src(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
+    let mut file = File::open(source_file.clone()).map_err(|e| ShaderError::FileError {
+        error: format!(
+            "Err: {:?}, {:?} is invalid or does not exit",
+            e, source_file
+        ),
+    })?;
+
     let mut s = String::new();
     file.read_to_string(&mut s).unwrap();
-    CString::new(s).unwrap()
+    Ok(s)
+}
+
+fn is_include_line(s: &str) -> bool {
+    s.starts_with("#pragma") && s.contains("include")
+}
+
+/// Read a shader file from disk and include any shaders in #pragma include(shadername.ext)
+/// TODO: Allow reading from multiple directories.
+/// 1. Read from system dir
+/// 2. Read from project dir
+fn read_from_file(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
+    let s = read_shader_src(source_file.clone())?;
+
+    // Find potential include files
+    let mut includes = HashMap::<&str, String>::new();
+    for line in s.lines() {
+        if is_include_line(line.trim_start()) {
+            let shader_name = pragma_shader_name(line);
+            let path = source_file
+                .parent()
+                .expect("Could not read path from shader source file");
+            let import_source_file = path.join(Path::new(shader_name.as_str()));
+            let k = read_shader_src(import_source_file)?;
+            includes.insert(line, k);
+        }
+    }
+
+    if includes.is_empty() {
+        return Ok(s);
+    }
+
+    // Do the actual inclusion
+    let k: String = s
+        .lines()
+        .map(|line| {
+            if includes.contains_key(line) {
+                info!("including {:?}", line);
+                format!("{}\n", includes.get(line).unwrap())
+            } else {
+                format!("{}\n", line)
+            }
+        })
+        .collect();
+
+    Ok(k)
 }
 
 fn shader_from_source(
     source_file: PathBuf,
     shader_type: gl::types::GLuint,
 ) -> anyhow::Result<gl::types::GLuint, ShaderError> {
-    let src = read_from_file(source_file);
+    let src = read_from_file(source_file)?;
+    let c_src = CString::new(src).expect("Could not convert src to CString");
+
+    // check for includes
 
     let id = unsafe { gl::CreateShader(shader_type) };
 
     unsafe {
-        gl::ShaderSource(id, 1, &src.as_ptr(), std::ptr::null());
+        gl::ShaderSource(id, 1, &c_src.as_ptr(), std::ptr::null());
         gl::CompileShader(id);
     }
 
@@ -86,8 +142,6 @@ pub fn create_program(
     vertex_path: PathBuf,
     fragment_path: PathBuf,
 ) -> Result<ShaderProgram, ShaderError> {
-    // let vertex_shader_path = format!("{}/{}", dir, vs);
-    // let frag_shader_path = format!("{}/{}", dir, fs);
     let vertex_shader = Shader::from_source(vertex_path, gl::VERTEX_SHADER)?;
     let frag_shader = Shader::from_source(fragment_path, gl::FRAGMENT_SHADER)?;
     info!(
@@ -165,15 +219,14 @@ impl ShaderService {
         let vs = PathBuf::from(format!("./{}/{}", shader_dir, vertex_src));
         let fs = PathBuf::from(format!("./{}/{}", shader_dir, frag_src));
 
-        let program = match create_program(vs.clone(), fs.clone()) {
-            Ok(p) => Some(p),
-            _ => None,
-        };
+        // NOTE: unwrapping here until we have UI
+        // Need to be able to recreate the shader service when user fixes the error
+        let program = create_program(vs.clone(), fs.clone()).unwrap();
 
         Self {
             vs,
             fs,
-            program,
+            program: Some(program),
             uniforms: vec![],
         }
     }
@@ -183,11 +236,11 @@ impl ShaderService {
             Ok(new_program) => {
                 self.program = Some(new_program);
                 let uniforms = read_uniforms(self.fs.clone());
-                println!("new uniforms");
+                info!("Found uniforms");
                 dbg!(&uniforms);
             }
             _ => {
-                println!("Compilation failed - not binding failed program");
+                eprintln!("Compilation failed - not binding failed program");
             }
         };
     }

@@ -1,6 +1,15 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum PlayMode {
     Playing,
     Paused,
+}
+
+impl Default for PlayMode {
+    fn default() -> Self {
+        Self::Paused
+    }
 }
 
 pub enum PlaybackControl {
