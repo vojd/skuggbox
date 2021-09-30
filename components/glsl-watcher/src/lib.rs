@@ -2,6 +2,7 @@
 #![warn(rust_2018_idioms)]
 
 use std::collections::HashSet;
+use std::fs;
 use std::iter::FromIterator;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Sender};
@@ -64,10 +65,15 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &Vec<String>) {
     let (watch_sender, watch_receiver) = channel();
     let mut watcher = raw_watcher(watch_sender).unwrap();
 
-    let paths : HashSet<PathBuf> = HashSet::from_iter(files.iter().map(|file| PathBuf::from(file)).into_iter());
     let mut dir_set : HashSet<PathBuf> = HashSet::new();
+    let valid_paths: HashSet<PathBuf> = HashSet::from_iter(files.iter()
+        .map(|file| PathBuf::from(file.clone()))
+        .map(|path| fs::canonicalize(path).unwrap())
+        .into_iter());
 
-    for path in paths {
+    for path in &valid_paths {
+        println!("parent {:?}", path.to_str().unwrap());
+
         let parent_path = match path.as_path().parent() {
             None => PathBuf::from("./"),
             Some(parent) => PathBuf::from(parent)
@@ -110,7 +116,8 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &Vec<String>) {
                    ..
                }) => {
                 let file_name = path.file_name().unwrap().to_str().unwrap();
-                if op == Op::WRITE && dir_set.contains(&path) {
+                println!("on change in: {:?}", path.to_str().unwrap());
+                if op == Op::WRITE && valid_paths.contains(&path) {
                     println!("change in: {:?}", file_name);
                     Some(path)
                 } else {

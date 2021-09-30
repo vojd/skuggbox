@@ -105,57 +105,11 @@ fn read_from_file(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
     Ok(k)
 }
 
-fn is_include_line(s: &str) -> bool {
-    s.starts_with("#pragma") && s.contains("include")
-}
-
-/// Read a shader file from disk and include any shaders in #pragma include(shadername.ext)
-/// TODO: Allow reading from multiple directories.
-/// 1. Read from system dir
-/// 2. Read from project dir
-fn read_from_file(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
-    let s = read_shader_src(source_file.clone())?;
-
-    // Find potential include files
-    let mut includes = HashMap::<&str, String>::new();
-    for line in s.lines() {
-        if is_include_line(line.trim_start()) {
-            let shader_name = pragma_shader_name(line);
-            let path = source_file
-                .parent()
-                .expect("Could not read path from shader source file");
-            let import_source_file = path.join(Path::new(shader_name.as_str()));
-            let k = read_shader_src(import_source_file)?;
-            includes.insert(line, k);
-        }
-    }
-
-    if includes.is_empty() {
-        return Ok(s);
-    }
-
-    // Do the actual inclusion
-    let k: String = s
-        .lines()
-        .map(|line| {
-            if includes.contains_key(line) {
-                info!("including {:?}", line);
-                format!("{}\n", includes.get(line).unwrap())
-            } else {
-                format!("{}\n", line)
-            }
-        })
-        .collect();
-
-    Ok(k)
-}
-
 fn shader_from_string(
-    source_file: String,
+    source: String,
     shader_type: gl::types::GLuint,
 ) -> anyhow::Result<gl::types::GLuint, ShaderError> {
-    let src = read_from_file(source_file)?;
-    let c_src = CString::new(src).expect("Could not convert src to CString");
+    let c_src = CString::new(source).expect("Could not convert source to CString");
 
     // check for includes
 
