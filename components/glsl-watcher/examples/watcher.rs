@@ -1,11 +1,16 @@
-use glsl_watcher::load;
+use std::sync::mpsc::channel;
+use glsl_watcher::watch;
 
 pub fn main() {
     println!("glsl loader");
 
-    load(
-        "./examples".to_string(),
-        "base.vert".to_string(),
-        "base.frag".to_string(),
+    let (sender, _receiver) = channel();
+
+    watch(
+        sender,
+        "./examples",
+        "base.vert",
+        "base.frag",
     );
 }
+
