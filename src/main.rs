@@ -24,8 +24,8 @@ use crate::timer::Timer;
 use glam::{Vec2, Vec3};
 use glutin::event::{MouseButton, MouseScrollDelta};
 use log::debug;
-use log::info;
 use log::error;
+use log::info;
 
 mod buffer;
 mod shader;
@@ -203,17 +203,17 @@ fn main() {
     }
 }
 
-fn verify_existing_files(files: &Vec<String>) -> bool {
+fn verify_existing_files(files: &[String]) -> bool {
     let mut no_errors = true;
 
     for file in files {
-        if ! std::path::Path::new(file).exists() {
+        if !std::path::Path::new(file).exists() {
             error!("Can't find the file {:?}!", file);
             no_errors = false;
         }
     }
 
-    return no_errors;
+    no_errors
 }
 
 #[allow(temporary_cstring_as_ptr)]

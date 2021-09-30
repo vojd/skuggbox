@@ -20,8 +20,7 @@ pub struct Shader {
     pub(crate) id: gl::types::GLuint,
 }
 
-const VERTEX_SHADER: &str =
-    "#version 330 core
+const VERTEX_SHADER: &str = "#version 330 core
     layout (location = 0) in vec3 position;
     void main() {
         gl_Position = vec4(position, 1.0);
@@ -44,7 +43,6 @@ impl Shader {
         let id = shader_from_string(source, shader_type)?;
         Ok(Shader { id })
     }
-
 }
 
 fn read_shader_src(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
@@ -159,12 +157,10 @@ fn shader_from_file(
     shader_type: gl::types::GLuint,
 ) -> anyhow::Result<gl::types::GLuint, ShaderError> {
     let source = read_from_file(source_file)?;
-    return shader_from_string(source, shader_type);
+    shader_from_string(source, shader_type)
 }
 
-pub fn create_program(
-    fragment_path: PathBuf,
-) -> Result<ShaderProgram, ShaderError> {
+pub fn create_program(fragment_path: PathBuf) -> Result<ShaderProgram, ShaderError> {
     let vertex_shader = Shader::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
     let frag_shader = Shader::from_file(fragment_path, gl::FRAGMENT_SHADER)?;
     info!(
@@ -252,7 +248,7 @@ impl ShaderService {
     }
 
     pub fn reload(&mut self) {
-        match create_program( self.fs.clone()) {
+        match create_program(self.fs.clone()) {
             Ok(new_program) => {
                 self.program = Some(new_program);
                 let uniforms = read_uniforms(self.fs.clone());

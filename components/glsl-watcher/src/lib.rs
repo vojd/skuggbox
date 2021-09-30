@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Sender};
 use std::time::Duration;
 
-use notify::{Op, raw_watcher, RawEvent, RecursiveMode, Watcher};
+use notify::{raw_watcher, Op, RawEvent, RecursiveMode, Watcher};
 
 /// Using `notify` to watch for changes to any defined shader file
 /// `sender` - std::sync::mpsc::channel
@@ -26,10 +26,10 @@ pub fn watch(sender: Sender<bool>, dir: &str, vs: &str, fs: &str) {
         // NOTE: It's likely that a change to a file will trigger two successive WRITE events
         let changed_file = match watch_receiver.recv() {
             Ok(RawEvent {
-                   path: Some(path),
-                   op: Ok(op),
-                   ..
-               }) => {
+                path: Some(path),
+                op: Ok(op),
+                ..
+            }) => {
                 let file_name = path.file_name().unwrap().to_str().unwrap();
                 if op == Op::WRITE && (file_name == vs || file_name == fs) {
                     println!("change in: {:?}", file_name);
@@ -61,22 +61,24 @@ pub fn watch(sender: Sender<bool>, dir: &str, vs: &str, fs: &str) {
 /// `sender` - std::sync::mpsc::channel
 /// `files` - Which files to watch
 ///
-pub fn watch_all(sender: Sender<PathBuf>, files: &Vec<String>) {
+pub fn watch_all(sender: Sender<PathBuf>, files: &[String]) {
     let (watch_sender, watch_receiver) = channel();
     let mut watcher = raw_watcher(watch_sender).unwrap();
 
-    let mut dir_set : HashSet<PathBuf> = HashSet::new();
-    let valid_paths: HashSet<PathBuf> = HashSet::from_iter(files.iter()
-        .map(|file| PathBuf::from(file.clone()))
-        .map(|path| fs::canonicalize(path).unwrap())
-        .into_iter());
+    let mut dir_set: HashSet<PathBuf> = HashSet::new();
+    let valid_paths: HashSet<PathBuf> = HashSet::from_iter(
+        files
+            .iter()
+            .map(|file| PathBuf::from(file.clone()))
+            .map(|path| fs::canonicalize(path).unwrap()),
+    );
 
     for path in &valid_paths {
         println!("parent {:?}", path.to_str().unwrap());
 
         let parent_path = match path.as_path().parent() {
             None => PathBuf::from("./"),
-            Some(parent) => PathBuf::from(parent)
+            Some(parent) => PathBuf::from(parent),
         };
 
         let mut insert = true;
@@ -93,7 +95,7 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &Vec<String>) {
                 insert = false;
             }
 
-            return true;
+            true
         });
 
         if insert {
@@ -103,7 +105,9 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &Vec<String>) {
 
     println!("Watching files shaders in:");
     for dir in &dir_set {
-        watcher.watch(dir.as_path(), RecursiveMode::Recursive).unwrap();
+        watcher
+            .watch(dir.as_path(), RecursiveMode::Recursive)
+            .unwrap();
         println!("   {:?}", dir);
     }
 
@@ -111,10 +115,10 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &Vec<String>) {
         // NOTE: It's likely that a change to a file will trigger two successive WRITE events
         let changed_file = match watch_receiver.recv() {
             Ok(RawEvent {
-                   path: Some(path),
-                   op: Ok(op),
-                   ..
-               }) => {
+                path: Some(path),
+                op: Ok(op),
+                ..
+            }) => {
                 let file_name = path.file_name().unwrap().to_str().unwrap();
                 println!("on change in: {:?}", path.to_str().unwrap());
                 if op == Op::WRITE && valid_paths.contains(&path) {
@@ -142,4 +146,3 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &Vec<String>) {
         std::thread::sleep(Duration::from_millis(10));
     }
 }
-
