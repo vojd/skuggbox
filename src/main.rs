@@ -203,19 +203,6 @@ fn main() {
     }
 }
 
-fn verify_existing_files(files: &Vec<String>) -> bool {
-    let mut no_errors = true;
-
-    for file in files {
-        if ! std::path::Path::new(file).exists() {
-            error!("Can't find the file {:?}!", file);
-            no_errors = false;
-        }
-    }
-
-    return no_errors;
-}
-
 #[allow(temporary_cstring_as_ptr)]
 fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
     unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
