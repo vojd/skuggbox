@@ -135,6 +135,12 @@ fn main() {
         process::exit(1);
     }
 
+    // verify that all specified file does exist
+    let shader_files = Vec::from(&args[1..]);
+    if !verify_existing_files(&shader_files) {
+        process::exit(2);
+    }
+
     let mut timer = Timer::new();
 
     let mut event_loop = EventLoop::new();
@@ -162,14 +168,10 @@ fn main() {
     // shader compiler channel
     let (sender, receiver) = channel();
 
-    let mut shaders = ShaderService::new(
-        "shaders".to_string(),
-        "base.vert".to_string(),
-        "base.frag".to_string(),
-    );
+    let mut shaders = ShaderService::new(shader_files[0].clone());
 
     let _ = thread::spawn(move || {
-        glsl_watcher::watch(sender, "shaders", "base.vert", "base.frag");
+        glsl_watcher::watch_all(sender, &shader_files);
     });
 
     let vertex_buffer = Buffer::new_vertex_buffer();
@@ -199,6 +201,19 @@ fn main() {
 
         timer.stop();
     }
+}
+
+fn verify_existing_files(files: &Vec<String>) -> bool {
+    let mut no_errors = true;
+
+    for file in files {
+        if ! std::path::Path::new(file).exists() {
+            error!("Can't find the file {:?}!", file);
+            no_errors = false;
+        }
+    }
+
+    return no_errors;
 }
 
 #[allow(temporary_cstring_as_ptr)]
