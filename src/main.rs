@@ -285,60 +285,54 @@ fn handle_events<T>(
                 WindowEvent::KeyboardInput { input, .. } => {
                     if input.state == ElementState::Pressed {
                         if let Some(keycode) = input.virtual_keycode {
-                            if keycode == VirtualKeyCode::Space {
-                                world_state.play_mode = match world_state.play_mode {
-                                    PlayMode::Playing => PlayMode::Paused,
-                                    PlayMode::Paused => {
-                                        timer.start();
-                                        PlayMode::Playing
+                            match keycode {
+                                VirtualKeyCode::Escape => {
+                                    world_state.is_running = false;
+                                }
+
+                                // Timeline controls
+                                VirtualKeyCode::Space => {
+                                    world_state.play_mode = match world_state.play_mode {
+                                        PlayMode::Playing => PlayMode::Paused,
+                                        PlayMode::Paused => {
+                                            timer.start();
+                                            PlayMode::Playing
+                                        }
                                     }
                                 }
-                            }
-
-                            if keycode == VirtualKeyCode::Right {
-                                world_state.playback_time =
-                                    seek(world_state.playback_time, PlaybackControl::Forward(1.0))
-                            }
-
-                            if keycode == VirtualKeyCode::Left {
-                                world_state.playback_time =
+                                VirtualKeyCode::Right => {
+                                    world_state.playback_time = seek(world_state.playback_time, PlaybackControl::Forward(1.0))
+                                }
+                                VirtualKeyCode::Left => {
+                                    world_state.playback_time =
                                     seek(world_state.playback_time, PlaybackControl::Rewind(1.0))
-                            }
+                                }
 
-                            if keycode == VirtualKeyCode::Key0 {
-                                world_state.playback_time = 0.0;
-                            }
-
-                            if keycode == VirtualKeyCode::A {
-                                world_state.camera.pos.x -= 0.5;
-                                world_state.camera.target.x += 0.5;
-                            }
-
-                            if keycode == VirtualKeyCode::D {
-                                world_state.camera.pos.x += 0.5;
-                                world_state.camera.target.x -= 0.5;
-                            }
-
-                            if keycode == VirtualKeyCode::W {
-                                world_state.camera.pos.y -= 0.5;
-                                world_state.camera.target.y += 0.5;
-                            }
-
-                            if keycode == VirtualKeyCode::S {
-                                world_state.camera.pos.y += 0.5;
-                                world_state.camera.target.y -= 0.5;
-                            }
-
-                            if keycode == VirtualKeyCode::Period {
-                                // reset all camera settings
-                                world_state.camera = Camera::default();
-                                world_state.mouse.delta = Vec2::new(0.0, 0.0);
+                                // Camera controls
+                                VirtualKeyCode::A => {
+                                    world_state.camera.pos.x -= 0.5;
+                                    world_state.camera.target.x += 0.5;
+                                }
+                                VirtualKeyCode::D => {
+                                    world_state.camera.pos.x += 0.5;
+                                    world_state.camera.target.x -= 0.5;
+                                }
+                                VirtualKeyCode::W => {
+                                    world_state.camera.pos.y -= 0.5;
+                                    world_state.camera.target.y += 0.5;
+                                }
+                                VirtualKeyCode::S => {
+                                    world_state.camera.pos.y += 0.5;
+                                    world_state.camera.target.y -= 0.5;
+                                }
+                                VirtualKeyCode::Period => {
+                                    // reset all camera settings
+                                    world_state.camera = Camera::default();
+                                    world_state.mouse.delta = Vec2::new(0.0, 0.0);
+                                }
+                                _ => debug!("pressed {:?}", keycode)
                             }
                         }
-                    }
-
-                    if let Some(keycode) = input.virtual_keycode {
-                        debug!("pressed {:?}", keycode)
                     }
                 }
 
