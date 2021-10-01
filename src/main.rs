@@ -3,7 +3,7 @@ extern crate glutin;
 extern crate winit;
 use std::ffi::CString;
 use std::sync::mpsc::channel;
-use std::thread;
+use std::{env, process, thread};
 
 use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
 use winit::{
@@ -24,6 +24,8 @@ use crate::timer::Timer;
 use glam::{Vec2, Vec3};
 use glutin::event::{MouseButton, MouseScrollDelta};
 use log::debug;
+use log::error;
+use log::info;
 
 mod buffer;
 mod shader;
@@ -124,10 +126,25 @@ struct WorldState {
 
 fn main() {
     SimpleLogger::new().init().unwrap();
+
+    // collect and verify arguments
+    let args: Vec<String> = env::args().collect();
+    if args.len() <= 1 {
+        error!("ERROR: No shader provided on the command line");
+        info!("Syntax: skuggbox [FILE]...");
+        process::exit(1);
+    }
+
+    // verify that all specified file does exist
+    let shader_files = Vec::from(&args[1..]);
+    if !verify_existing_files(&shader_files) {
+        process::exit(2);
+    }
+
     let mut timer = Timer::new();
 
     let mut event_loop = EventLoop::new();
-    let window = WindowBuilder::new().with_title("Skuggbox rs");
+    let window = WindowBuilder::new().with_title("Skuggbox");
 
     let window_context = ContextBuilder::new()
         .build_windowed(window, &event_loop)
@@ -151,14 +168,10 @@ fn main() {
     // shader compiler channel
     let (sender, receiver) = channel();
 
-    let mut shaders = ShaderService::new(
-        "shaders".to_string(),
-        "base.vert".to_string(),
-        "base.frag".to_string(),
-    );
+    let mut shaders = ShaderService::new(shader_files[0].clone());
 
     let _ = thread::spawn(move || {
-        glsl_watcher::watch(sender, "shaders", "base.vert", "base.frag");
+        glsl_watcher::watch_all(sender, &shader_files);
     });
 
     let vertex_buffer = Buffer::new_vertex_buffer();
@@ -188,6 +201,19 @@ fn main() {
 
         timer.stop();
     }
+}
+
+fn verify_existing_files(files: &[String]) -> bool {
+    let mut no_errors = true;
+
+    for file in files {
+        if !std::path::Path::new(file).exists() {
+            error!("Can't find the file {:?}!", file);
+            no_errors = false;
+        }
+    }
+
+    no_errors
 }
 
 #[allow(temporary_cstring_as_ptr)]

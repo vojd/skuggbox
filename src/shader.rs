@@ -20,12 +20,27 @@ pub struct Shader {
     pub(crate) id: gl::types::GLuint,
 }
 
+const VERTEX_SHADER: &str = "#version 330 core
+    layout (location = 0) in vec3 position;
+    void main() {
+        gl_Position = vec4(position, 1.0);
+    }
+    ";
+
 impl Shader {
-    pub fn from_source(
+    pub fn from_file(
         source_file: PathBuf,
         shader_type: gl::types::GLuint,
     ) -> anyhow::Result<Shader, ShaderError> {
-        let id = shader_from_source(source_file, shader_type)?;
+        let id = shader_from_file(source_file, shader_type)?;
+        Ok(Shader { id })
+    }
+
+    pub fn from_source(
+        source: String,
+        shader_type: gl::types::GLuint,
+    ) -> anyhow::Result<Shader, ShaderError> {
+        let id = shader_from_string(source, shader_type)?;
         Ok(Shader { id })
     }
 }
@@ -88,12 +103,11 @@ fn read_from_file(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
     Ok(k)
 }
 
-fn shader_from_source(
-    source_file: PathBuf,
+fn shader_from_string(
+    source: String,
     shader_type: gl::types::GLuint,
 ) -> anyhow::Result<gl::types::GLuint, ShaderError> {
-    let src = read_from_file(source_file)?;
-    let c_src = CString::new(src).expect("Could not convert src to CString");
+    let c_src = CString::new(source).expect("Could not convert source to CString");
 
     // check for includes
 
@@ -138,12 +152,17 @@ fn shader_from_source(
     Ok(id)
 }
 
-pub fn create_program(
-    vertex_path: PathBuf,
-    fragment_path: PathBuf,
-) -> Result<ShaderProgram, ShaderError> {
-    let vertex_shader = Shader::from_source(vertex_path, gl::VERTEX_SHADER)?;
-    let frag_shader = Shader::from_source(fragment_path, gl::FRAGMENT_SHADER)?;
+fn shader_from_file(
+    source_file: PathBuf,
+    shader_type: gl::types::GLuint,
+) -> anyhow::Result<gl::types::GLuint, ShaderError> {
+    let source = read_from_file(source_file)?;
+    shader_from_string(source, shader_type)
+}
+
+pub fn create_program(fragment_path: PathBuf) -> Result<ShaderProgram, ShaderError> {
+    let vertex_shader = Shader::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
+    let frag_shader = Shader::from_file(fragment_path, gl::FRAGMENT_SHADER)?;
     info!(
         "Creating shader program: {} {}",
         vertex_shader.id, frag_shader.id
@@ -208,23 +227,20 @@ impl Drop for ShaderProgram {
 
 #[allow(dead_code)]
 pub struct ShaderService {
-    vs: PathBuf,
     fs: PathBuf,
     pub program: Option<ShaderProgram>,
     uniforms: Vec<Uniform>, // TODO: Unused
 }
 
 impl ShaderService {
-    pub fn new(shader_dir: String, vertex_src: String, frag_src: String) -> Self {
-        let vs = PathBuf::from(format!("./{}/{}", shader_dir, vertex_src));
-        let fs = PathBuf::from(format!("./{}/{}", shader_dir, frag_src));
+    pub fn new(shader: String) -> Self {
+        let fs = PathBuf::from(shader);
 
         // NOTE: unwrapping here until we have UI
         // Need to be able to recreate the shader service when user fixes the error
-        let program = create_program(vs.clone(), fs.clone()).unwrap();
+        let program = create_program(fs.clone()).unwrap();
 
         Self {
-            vs,
             fs,
             program: Some(program),
             uniforms: vec![],
@@ -232,7 +248,7 @@ impl ShaderService {
     }
 
     pub fn reload(&mut self) {
-        match create_program(self.vs.clone(), self.fs.clone()) {
+        match create_program(self.fs.clone()) {
             Ok(new_program) => {
                 self.program = Some(new_program);
                 let uniforms = read_uniforms(self.fs.clone());
