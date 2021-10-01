@@ -21,11 +21,13 @@ use winit::window::Window;
 
 use crate::state::{seek, PlayMode, PlaybackControl};
 use crate::timer::Timer;
-use glam::{Vec2, Vec3};
-use glutin::event::{MouseButton, MouseScrollDelta};
+use glam::Vec2;
 use log::debug;
 use log::error;
 use log::info;
+use crate::camera::{CameraModel, OrbitCamera};
+use crate::event::WindowEventHandler;
+use crate::mouse::Mouse;
 
 mod buffer;
 mod shader;
@@ -33,6 +35,9 @@ mod state;
 mod timer;
 mod uniforms;
 mod utils;
+mod mouse;
+mod camera;
+mod event;
 
 #[allow(unused_macros)]
 macro_rules! gl_error {
@@ -63,53 +68,6 @@ macro_rules! gl_error {
     }
 }
 
-#[derive(Debug)]
-struct Mouse {
-    pos: Vec2,
-    last_pos: Vec2,
-    delta: Vec2,
-
-    is_lmb_down: bool,
-    is_rmb_down: bool,
-    is_first_rmb_click: bool,
-}
-
-impl Default for Mouse {
-    fn default() -> Self {
-        Self {
-            pos: Vec2::new(0.0, 0.0),
-            last_pos: Vec2::ZERO,
-            delta: Vec2::new(0.0, 0.0),
-
-            is_lmb_down: false,
-            is_rmb_down: false,
-            is_first_rmb_click: false,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Camera {
-    pos: Vec3,
-    target: Vec3,
-    angle: Vec2,
-    speed: f32,
-    zoom: f32,
-}
-
-impl Default for Camera {
-    fn default() -> Self {
-        Self {
-            pos: Vec3::new(02.0, 2.0, -2.0),
-            target: Vec3::new(0.0, 0.0, 0.0),
-            angle: Vec2::ZERO,
-            speed: 1.0,
-            zoom: 0.0,
-        }
-    }
-}
-
-#[derive(Debug)]
 struct WorldState {
     width: i32,
     height: i32,
@@ -121,7 +79,7 @@ struct WorldState {
     /// Running or paused?
     play_mode: PlayMode,
 
-    camera: Camera,
+    camera: Box<dyn CameraModel>
 }
 
 fn main() {
@@ -162,7 +120,7 @@ fn main() {
         playback_time: 0.0,
         mouse: Mouse::default(),
         play_mode: PlayMode::Playing,
-        camera: Camera::default(),
+        camera: Box::from(OrbitCamera::default()),
     };
 
     // shader compiler channel
@@ -249,45 +207,15 @@ fn handle_events<T>(
                     world_state.height = size.height;
                 }
 
-                WindowEvent::CursorMoved { position, .. } => {
-                    if world_state.mouse.is_rmb_down {
-                        world_state.mouse.delta = Vec2::new(
-                            position.x as f32 - world_state.mouse.pos.x,
-                            world_state.mouse.pos.y - position.y as f32,
-                        );
-
-                        // reset mouse delta so we don't get jumps when we
-                        if world_state.mouse.is_first_rmb_click {
-                            world_state.mouse.delta = Vec2::ZERO;
-                            world_state.mouse.is_first_rmb_click = false;
-                        }
-                        world_state.mouse.pos = Vec2::new(position.x as f32, position.y as f32);
-                        world_state.camera.angle += world_state.mouse.delta;
-                    }
-                }
-
-                WindowEvent::MouseInput { button, state, .. } => {
-                    world_state.mouse.is_lmb_down =
-                        button == MouseButton::Left && state == ElementState::Pressed;
-                    world_state.mouse.is_rmb_down =
-                        button == MouseButton::Right && state == ElementState::Pressed;
-
-                    world_state.mouse.is_first_rmb_click = world_state.mouse.is_rmb_down;
-                }
-
-                WindowEvent::MouseWheel { delta, .. } => {
-                    world_state.camera.zoom += match delta {
-                        MouseScrollDelta::LineDelta(_, y) => y,
-                        MouseScrollDelta::PixelDelta(pos) => pos.y as f32,
-                    };
-                }
-
                 WindowEvent::KeyboardInput { input, .. } => {
                     if input.state == ElementState::Pressed {
                         if let Some(keycode) = input.virtual_keycode {
                             match keycode {
                                 VirtualKeyCode::Escape => {
+                                    println!("Bye now...");
                                     world_state.is_running = false;
+                                    buffer.delete();
+                                    *control_flow = ControlFlow::Exit;
                                 }
 
                                 // Timeline controls
@@ -301,36 +229,24 @@ fn handle_events<T>(
                                     }
                                 }
                                 VirtualKeyCode::Right => {
-                                    world_state.playback_time = seek(world_state.playback_time, PlaybackControl::Forward(1.0))
+                                    world_state.playback_time = seek(
+                                        world_state.playback_time,
+                                        PlaybackControl::Forward(1.0),
+                                    )
                                 }
                                 VirtualKeyCode::Left => {
-                                    world_state.playback_time =
-                                    seek(world_state.playback_time, PlaybackControl::Rewind(1.0))
+                                    world_state.playback_time = seek(
+                                        world_state.playback_time,
+                                        PlaybackControl::Rewind(1.0),
+                                    )
                                 }
 
-                                // Camera controls
-                                VirtualKeyCode::A => {
-                                    world_state.camera.pos.x -= 0.5;
-                                    world_state.camera.target.x += 0.5;
-                                }
-                                VirtualKeyCode::D => {
-                                    world_state.camera.pos.x += 0.5;
-                                    world_state.camera.target.x -= 0.5;
-                                }
-                                VirtualKeyCode::W => {
-                                    world_state.camera.pos.y -= 0.5;
-                                    world_state.camera.target.y += 0.5;
-                                }
-                                VirtualKeyCode::S => {
-                                    world_state.camera.pos.y += 0.5;
-                                    world_state.camera.target.y -= 0.5;
-                                }
                                 VirtualKeyCode::Period => {
                                     // reset all camera settings
-                                    world_state.camera = Camera::default();
+                                    world_state.camera = Box::from(OrbitCamera::default());
                                     world_state.mouse.delta = Vec2::new(0.0, 0.0);
                                 }
-                                _ => debug!("pressed {:?}", keycode)
+                                _ => debug!("pressed {:?}", keycode),
                             }
                         }
                     }
@@ -338,6 +254,10 @@ fn handle_events<T>(
 
                 _ => {}
             }
+
+            world_state.mouse.handle_window_events(&event);
+            world_state.camera.handle_window_events(&event);
+            world_state.camera.handle_mouse(&world_state.mouse);
         }
 
         Event::MainEventsCleared => {
@@ -383,6 +303,9 @@ fn render(
         let location = get_uniform_location(program, "iResolution");
         gl::Uniform2f(location, state.width as f32, state.height as f32);
 
+        /*
+
+        // TODO: move accessors to CameraModel trait
         // NOTE: Passing in the delta for now as it's used for cam control in the shader
         let location = get_uniform_location(program, "iMouse");
         gl::Uniform3f(
@@ -418,6 +341,8 @@ fn render(
 
         let location = get_uniform_location(program, "uCamAngle");
         gl::Uniform2f(location, state.camera.angle.x, state.camera.angle.y);
+
+         */
 
         gl::Clear(gl::COLOR_BUFFER_BIT);
         buffer.bind();
