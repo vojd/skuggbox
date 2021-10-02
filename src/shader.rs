@@ -1,13 +1,14 @@
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::fs::File;
 use std::io::Read;
+use std::path::{Path, PathBuf};
+
+use log::info;
 
 use crate::shader::ShaderError::CompilationError;
 use crate::uniforms::{read_uniforms, Uniform};
 use crate::utils::{cstr_to_str, cstr_with_len, pragma_shader_name};
-use log::info;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum ShaderError {
@@ -225,24 +226,27 @@ impl Drop for ShaderProgram {
     }
 }
 
-#[allow(dead_code)]
 pub struct ShaderService {
     fs: PathBuf,
     pub program: Option<ShaderProgram>,
+    pub files: Vec<PathBuf>,
     uniforms: Vec<Uniform>, // TODO: Unused
 }
 
 impl ShaderService {
-    pub fn new(shader: String) -> Self {
-        let fs = PathBuf::from(shader);
-
+    pub fn new(fs: PathBuf) -> Self {
         // NOTE: unwrapping here until we have UI
         // Need to be able to recreate the shader service when user fixes the error
         let program = create_program(fs.clone()).unwrap();
-
+        let files = if let Some(f) = find_included_files(fs.clone()) {
+            vec![fs.clone(), f.iter().collect()]
+        } else {
+            vec![fs.clone()]
+        };
         Self {
             fs,
             program: Some(program),
+            files,
             uniforms: vec![],
         }
     }
@@ -251,13 +255,34 @@ impl ShaderService {
         match create_program(self.fs.clone()) {
             Ok(new_program) => {
                 self.program = Some(new_program);
-                let uniforms = read_uniforms(self.fs.clone());
-                info!("Found uniforms");
-                dbg!(&uniforms);
+                self.uniforms = read_uniforms(self.fs.clone());
+                info!("Shader recreated without errors")
             }
             _ => {
                 eprintln!("Compilation failed - not binding failed program");
             }
         };
     }
+}
+
+// Search for included files from the supplied `shader`
+fn find_included_files(shader: PathBuf) -> Option<Vec<PathBuf>> {
+    let s = match read_shader_src(shader.clone()) {
+        Ok(src) => src,
+        _ => return None,
+    };
+
+    // Find potential include files
+    let mut includes = Vec::new();
+    for line in s.lines() {
+        if is_include_line(line.trim_start()) {
+            let shader_name = pragma_shader_name(line);
+            let path = shader
+                .parent()
+                .expect("Could not read path from shader source file");
+            let s = path.join(Path::new(shader_name.as_str()));
+            includes.push(s);
+        }
+    }
+    Some(includes)
 }

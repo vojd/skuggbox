@@ -1,11 +1,22 @@
 extern crate gl;
 extern crate glutin;
 extern crate winit;
+
 use std::ffi::CString;
 use std::sync::mpsc::channel;
-use std::{env, process, thread};
+use std::thread;
 
-use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
+use glam::{Vec2, Vec3};
+use glutin::{
+    event::{MouseButton, MouseScrollDelta},
+    ContextBuilder, ContextWrapper, PossiblyCurrent,
+};
+use log::debug;
+use simple_logger::SimpleLogger;
+use structopt::StructOpt;
+use winit::event::{ElementState, VirtualKeyCode};
+use winit::platform::run_return::EventLoopExtRunReturn;
+use winit::window::Window;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -14,54 +25,17 @@ use winit::{
 
 use crate::buffer::Buffer;
 use crate::shader::{ShaderProgram, ShaderService};
-use simple_logger::SimpleLogger;
-use winit::event::{ElementState, VirtualKeyCode};
-use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::window::Window;
-
 use crate::state::{seek, PlayMode, PlaybackControl};
 use crate::timer::Timer;
-use glam::{Vec2, Vec3};
-use glutin::event::{MouseButton, MouseScrollDelta};
-use log::debug;
-use log::error;
-use log::info;
 
 mod buffer;
+mod config;
+mod macros;
 mod shader;
 mod state;
 mod timer;
 mod uniforms;
 mod utils;
-
-#[allow(unused_macros)]
-macro_rules! gl_error {
-    ($($s:stmt;)*) => {
-        $(
-            $s;
-            if cfg!(debug_assertions) {
-                let err = gl::GetError();
-                if err != gl::NO_ERROR {
-                    let err_str = match err {
-                        gl::INVALID_ENUM => "GL_INVALID_ENUM",
-                        gl::INVALID_VALUE => "GL_INVALID_VALUE",
-                        gl::INVALID_OPERATION => "GL_INVALID_OPERATION",
-                        gl::INVALID_FRAMEBUFFER_OPERATION => "GL_INVALID_FRAMEBUFFER_OPERATION",
-                        gl::OUT_OF_MEMORY => "GL_OUT_OF_MEMORY",
-                        gl::STACK_UNDERFLOW => "GL_STACK_UNDERFLOW",
-                        gl::STACK_OVERFLOW => "GL_STACK_OVERFLOW",
-                        _ => "unknown error"
-                    };
-                    println!("{}:{} - {} caused {}",
-                             file!(),
-                             line!(),
-                             stringify!($s),
-                             err_str);
-                }
-            }
-        )*
-    }
-}
 
 #[derive(Debug)]
 struct Mouse {
@@ -127,20 +101,10 @@ struct WorldState {
 fn main() {
     SimpleLogger::new().init().unwrap();
 
-    // collect and verify arguments
-    let args: Vec<String> = env::args().collect();
-    if args.len() <= 1 {
-        error!("ERROR: No shader provided on the command line");
-        info!("Syntax: skuggbox [FILE]...");
-        process::exit(1);
-    }
+    // Parse command line arguments using `structopt`
+    let config = config::Config::from_args();
 
     // verify that all specified file does exist
-    let shader_files = Vec::from(&args[1..]);
-    if !verify_existing_files(&shader_files) {
-        process::exit(2);
-    }
-
     let mut timer = Timer::new();
 
     let mut event_loop = EventLoop::new();
@@ -168,17 +132,18 @@ fn main() {
     // shader compiler channel
     let (sender, receiver) = channel();
 
-    let mut shaders = ShaderService::new(shader_files[0].clone());
+    let mut shader = ShaderService::new(config.fragment_shader);
 
+    let files = shader.files.clone();
     let _ = thread::spawn(move || {
-        glsl_watcher::watch_all(sender, &shader_files);
+        glsl_watcher::watch_all(sender, files);
     });
 
     let vertex_buffer = Buffer::new_vertex_buffer();
 
     while state.is_running {
         if receiver.try_recv().is_ok() {
-            shaders.reload();
+            shader.reload();
         }
 
         if matches!(state.play_mode, PlayMode::Playing) {
@@ -197,23 +162,10 @@ fn main() {
             );
         });
 
-        render(&context, &mut state, &shaders, &vertex_buffer);
+        render(&context, &mut state, &shader, &vertex_buffer);
 
         timer.stop();
     }
-}
-
-fn verify_existing_files(files: &[String]) -> bool {
-    let mut no_errors = true;
-
-    for file in files {
-        if !std::path::Path::new(file).exists() {
-            error!("Can't find the file {:?}!", file);
-            no_errors = false;
-        }
-    }
-
-    no_errors
 }
 
 #[allow(temporary_cstring_as_ptr)]
