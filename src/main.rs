@@ -24,9 +24,9 @@ use winit::{
 };
 
 use crate::buffer::Buffer;
-use crate::shader::{ShaderProgram, ShaderService};
 use crate::state::{seek, PlayMode, PlaybackControl};
 use crate::timer::Timer;
+use shader::{ShaderProgram, ShaderService};
 
 mod buffer;
 mod config;

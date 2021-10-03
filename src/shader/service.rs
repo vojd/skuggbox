@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use log::info;
 
-use crate::shader::ShaderError::CompilationError;
+use crate::shader::Shader;
 use crate::uniforms::{read_uniforms, Uniform};
 use crate::utils::{cstr_to_str, cstr_with_len, pragma_shader_name};
 
@@ -16,35 +16,12 @@ pub enum ShaderError {
     FileError { error: String },
 }
 
-#[derive(Debug)]
-pub struct Shader {
-    pub(crate) id: gl::types::GLuint,
-}
-
 const VERTEX_SHADER: &str = "#version 330 core
     layout (location = 0) in vec3 position;
     void main() {
         gl_Position = vec4(position, 1.0);
     }
     ";
-
-impl Shader {
-    pub fn from_file(
-        source_file: PathBuf,
-        shader_type: gl::types::GLuint,
-    ) -> anyhow::Result<Shader, ShaderError> {
-        let id = shader_from_file(source_file, shader_type)?;
-        Ok(Shader { id })
-    }
-
-    pub fn from_source(
-        source: String,
-        shader_type: gl::types::GLuint,
-    ) -> anyhow::Result<Shader, ShaderError> {
-        let id = shader_from_string(source, shader_type)?;
-        Ok(Shader { id })
-    }
-}
 
 fn read_shader_src(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
     let mut file = File::open(source_file.clone()).map_err(|e| ShaderError::FileError {
@@ -104,7 +81,7 @@ fn read_from_file(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
     Ok(k)
 }
 
-fn shader_from_string(
+pub(crate) fn shader_from_string(
     source: String,
     shader_type: gl::types::GLuint,
 ) -> anyhow::Result<gl::types::GLuint, ShaderError> {
@@ -145,7 +122,7 @@ fn shader_from_string(
 
         // Prints the compilation error to console
         eprintln!("{}", error.to_string_lossy());
-        return Err(CompilationError {
+        return Err(ShaderError::CompilationError {
             error: cstr_to_str(&error),
         });
     }
@@ -153,7 +130,7 @@ fn shader_from_string(
     Ok(id)
 }
 
-fn shader_from_file(
+pub(crate) fn shader_from_file(
     source_file: PathBuf,
     shader_type: gl::types::GLuint,
 ) -> anyhow::Result<gl::types::GLuint, ShaderError> {
