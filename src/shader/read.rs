@@ -51,7 +51,7 @@ pub fn read_from_file(source_file: PathBuf) -> anyhow::Result<String, ShaderErro
     Ok(k)
 }
 
-fn read_shader_src(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
+pub fn read_shader_src(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
     let mut file = File::open(source_file.clone()).map_err(|e| ShaderError::FileError {
         error: format!(
             "Err: {:?}, {:?} is invalid or does not exit",
@@ -88,4 +88,56 @@ pub fn find_included_files(shader: PathBuf) -> Option<Vec<PathBuf>> {
         }
     }
     Some(includes)
+}
+
+#[derive(Debug, Clone)]
+pub struct Part {
+    source_file: PathBuf,
+    base_src: String,
+}
+pub fn t(source_file: PathBuf, col: &mut Vec<Part>) -> Part {
+
+    let base_src = read_shader_src(source_file.clone()).unwrap();
+    dbg!(&base_src);
+    let part = Part {
+        source_file: source_file.clone(),
+        base_src: base_src.clone(),
+    };
+
+    col.push(part.clone());
+
+    // now find any included file in the base src
+    let includes = included_files(base_src.clone());
+
+    let k:Vec<Part> = includes.iter().map(|include| {
+        let new_filename = include.to_owned();
+        source_file.parent().unwrap().join(Path::new(new_filename.as_str()))
+    })
+        .map(|a| t(a, col))
+        .collect();
+
+    part
+}
+
+
+/// NOTE TEST
+pub fn included_files(source: String) -> Vec<String> {
+    source
+        .lines()
+        .filter(|line| is_include_line(line.trim_start()))
+        .map(pragma_shader_name)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::included_files;
+
+    #[test]
+    fn returns_paths_to_included_files() {
+        let source = "#pragma include(\"./shaders/base.frag\");".to_owned();
+        let included_files = included_files(source);
+        dbg!(&included_files);
+        assert_ne!(included_files.len(), 0);
+    }
 }
