@@ -47,7 +47,6 @@ impl WindowEventHandler for Mouse {
                     }
 
                     self.pos = Vec2::new(position.x as f32, position.y as f32);
-
                 }
                 true
             }
@@ -58,13 +57,14 @@ impl WindowEventHandler for Mouse {
                 }
 
                 self.is_lmb_down = *button == MouseButton::Left && *state == ElementState::Pressed;
-                self.is_mmb_down = *button == MouseButton::Middle && *state == ElementState::Pressed;
+                self.is_mmb_down =
+                    *button == MouseButton::Middle && *state == ElementState::Pressed;
                 self.is_rmb_down = *button == MouseButton::Right && *state == ElementState::Pressed;
                 self.is_first_rmb_click = self.is_rmb_down;
                 true
             }
 
-            _ => false
+            _ => false,
         }
     }
 }

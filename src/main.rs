@@ -19,25 +19,25 @@ use winit::event::{ElementState, VirtualKeyCode};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::Window;
 
+use crate::camera::{CameraModel, OrbitCamera};
+use crate::event::WindowEventHandler;
+use crate::mouse::Mouse;
 use crate::state::{seek, PlayMode, PlaybackControl};
 use crate::timer::Timer;
 use glam::Vec2;
 use log::debug;
 use log::error;
 use log::info;
-use crate::camera::{CameraModel, OrbitCamera};
-use crate::event::WindowEventHandler;
-use crate::mouse::Mouse;
 
 mod buffer;
+mod camera;
+mod event;
+mod mouse;
 mod shader;
 mod state;
 mod timer;
 mod uniforms;
 mod utils;
-mod mouse;
-mod camera;
-mod event;
 
 #[allow(unused_macros)]
 macro_rules! gl_error {
@@ -79,7 +79,7 @@ struct WorldState {
     /// Running or paused?
     play_mode: PlayMode,
 
-    camera: Box<dyn CameraModel>
+    camera: Box<dyn CameraModel>,
 }
 
 fn main() {
@@ -257,7 +257,9 @@ fn handle_events<T>(
 
             world_state.mouse.handle_window_events(&event);
             world_state.camera.handle_window_events(&event);
-            world_state.camera.handle_mouse(&world_state.mouse, world_state.delta_time);
+            world_state
+                .camera
+                .handle_mouse(&world_state.mouse, world_state.delta_time);
         }
 
         Event::MainEventsCleared => {
@@ -311,7 +313,7 @@ fn render(
             state.mouse.pos.x,
             state.mouse.pos.y,
             if state.mouse.is_lmb_down { 1.0 } else { 0.0 },
-            if state.mouse.is_rmb_down { 1.0 } else { 0.0 }
+            if state.mouse.is_rmb_down { 1.0 } else { 0.0 },
         );
 
         // push the camera transform to the shader
@@ -319,20 +321,10 @@ fn render(
         let position = transform.w_axis;
 
         let location = get_uniform_location(program, "sbCameraPosition");
-        gl::Uniform3f(
-            location,
-            position.x,
-            position.y,
-            position.z
-        );
+        gl::Uniform3f(location, position.x, position.y, position.z);
 
         let location = get_uniform_location(program, "sbCameraTransform");
-        gl::UniformMatrix4fv(
-            location,
-            1,
-            gl::FALSE,
-            &transform.to_cols_array()[0]
-        );
+        gl::UniformMatrix4fv(location, 1, gl::FALSE, &transform.to_cols_array()[0]);
 
         gl::Clear(gl::COLOR_BUFFER_BIT);
         buffer.bind();

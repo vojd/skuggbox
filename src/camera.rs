@@ -1,6 +1,6 @@
-use std::f32::consts::PI;
-use glam::{Vec2, Vec3, Vec4, Mat4};
+use glam::{Mat4, Vec2, Vec3, Vec4};
 use glutin::event::WindowEvent;
+use std::f32::consts::PI;
 use winit::event::{ElementState, MouseScrollDelta, VirtualKeyCode};
 
 use crate::event::WindowEventHandler;
@@ -12,7 +12,6 @@ pub trait CameraModel: WindowEventHandler {
     fn calculate_uniform_data(&mut self) -> Mat4;
 }
 
-
 #[derive(Debug)]
 pub struct OrbitCamera {
     pos: Vec3,
@@ -21,7 +20,6 @@ pub struct OrbitCamera {
     speed: f32,
     zoom: f32,
 }
-
 
 impl Default for OrbitCamera {
     fn default() -> Self {
@@ -63,19 +61,19 @@ impl CameraModel for OrbitCamera {
         let forward = (self.target - self.pos).normalize();
         let side = Vec3::cross(up, forward);
 
-        return Mat4::from_cols(
+        Mat4::from_cols(
             Vec4::new(side.x, side.y, side.z, 0.0),
             Vec4::new(up.x, up.y, up.z, 0.0),
             Vec4::new(forward.x, forward.y, forward.z, 0.0),
-            Vec4::new(self.pos.x, self.pos.y, self.pos.z, 1.0)
-        );
+            Vec4::new(self.pos.x, self.pos.y, self.pos.z, 1.0),
+        )
     }
 }
 
 impl WindowEventHandler for OrbitCamera {
     fn handle_window_events(&mut self, event: &WindowEvent) -> bool {
         match event {
-            WindowEvent::MouseWheel {delta, ..} => {
+            WindowEvent::MouseWheel { delta, .. } => {
                 self.zoom -= match delta {
                     MouseScrollDelta::LineDelta(_, y) => *y,
                     MouseScrollDelta::PixelDelta(pos) => pos.y as f32,
@@ -86,7 +84,7 @@ impl WindowEventHandler for OrbitCamera {
                 }
 
                 true
-            },
+            }
 
             WindowEvent::KeyboardInput { input, .. } => {
                 if input.state == ElementState::Pressed {
@@ -105,7 +103,7 @@ impl WindowEventHandler for OrbitCamera {
                                 self.target.y -= 0.5;
                             }
 
-                            _ => ()
+                            _ => (),
                         }
                     }
                 }
@@ -113,7 +111,7 @@ impl WindowEventHandler for OrbitCamera {
                 true
             }
 
-            _ => false
+            _ => false,
         }
     }
 }
