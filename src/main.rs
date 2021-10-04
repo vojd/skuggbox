@@ -257,7 +257,7 @@ fn handle_events<T>(
 
             world_state.mouse.handle_window_events(&event);
             world_state.camera.handle_window_events(&event);
-            world_state.camera.handle_mouse(&world_state.mouse);
+            world_state.camera.handle_mouse(&world_state.mouse, world_state.delta_time);
         }
 
         Event::MainEventsCleared => {
@@ -295,54 +295,44 @@ fn render(
 
         gl::UseProgram(program.id);
 
-        // push uniform values to shader
-
-        let location = get_uniform_location(program, "iTime");
-        gl::Uniform1f(location, state.playback_time);
-
+        // viewport resolution in pixels
         let location = get_uniform_location(program, "iResolution");
         gl::Uniform2f(location, state.width as f32, state.height as f32);
 
-        /*
+        let location = get_uniform_location(program, "iTime");
+        gl::Uniform1f(location, state.playback_time);
+        let location = get_uniform_location(program, "iTimeDelta");
+        gl::Uniform1f(location, state.delta_time);
 
-        // TODO: move accessors to CameraModel trait
-        // NOTE: Passing in the delta for now as it's used for cam control in the shader
+        // push mouse location to the shader
         let location = get_uniform_location(program, "iMouse");
-        gl::Uniform3f(
+        gl::Uniform4f(
             location,
             state.mouse.pos.x,
             state.mouse.pos.y,
-            state.camera.zoom,
+            if state.mouse.is_lmb_down { 1.0 } else { 0.0 },
+            if state.mouse.is_rmb_down { 1.0 } else { 0.0 }
         );
 
-        let location = get_uniform_location(program, "uCamPos");
+        // push the camera transform to the shader
+        let transform = state.camera.calculate_uniform_data();
+        let position = transform.w_axis;
+
+        let location = get_uniform_location(program, "sbCameraPosition");
         gl::Uniform3f(
             location,
-            state.camera.pos.x,
-            state.camera.pos.y,
-            state.camera.pos.z,
+            position.x,
+            position.y,
+            position.z
         );
 
-        let location = get_uniform_location(program, "uCamPos");
-        gl::Uniform3f(
+        let location = get_uniform_location(program, "sbCameraTransform");
+        gl::UniformMatrix4fv(
             location,
-            state.camera.pos.x,
-            state.camera.pos.y,
-            state.camera.pos.z,
+            1,
+            gl::FALSE,
+            &transform.to_cols_array()[0]
         );
-
-        let location = get_uniform_location(program, "uCamTarget");
-        gl::Uniform3f(
-            location,
-            state.camera.target.x,
-            state.camera.target.y,
-            state.camera.target.z,
-        );
-
-        let location = get_uniform_location(program, "uCamAngle");
-        gl::Uniform2f(location, state.camera.angle.x, state.camera.angle.y);
-
-         */
 
         gl::Clear(gl::COLOR_BUFFER_BIT);
         buffer.bind();

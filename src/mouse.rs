@@ -32,31 +32,35 @@ impl Default for Mouse {
 
 impl WindowEventHandler for Mouse {
     fn handle_window_events(&mut self, event: &WindowEvent) -> bool {
-        let mouse = self;
-
         match event {
             WindowEvent::CursorMoved { position, .. } => {
-                if mouse.is_rmb_down {
-                    mouse.delta = Vec2::new(
-                        position.x as f32 - mouse.pos.x,
-                        mouse.pos.y - position.y as f32,
+                if self.is_rmb_down {
+                    self.delta = Vec2::new(
+                        position.x as f32 - self.pos.x,
+                        self.pos.y - position.y as f32,
                     );
 
-                    // reset mouse delta so we don't get jumps when we
-                    if mouse.is_first_rmb_click {
-                        mouse.delta = Vec2::ZERO;
-                        mouse.is_first_rmb_click = false;
+                    // reset mouse delta so we don't get jumps when we press down the mouse button
+                    if self.is_first_rmb_click {
+                        self.delta = Vec2::ZERO;
+                        self.is_first_rmb_click = false;
                     }
-                    mouse.pos = Vec2::new(position.x as f32, position.y as f32);
+
+                    self.pos = Vec2::new(position.x as f32, position.y as f32);
+
                 }
                 true
             }
 
             WindowEvent::MouseInput { button, state, .. } => {
-                mouse.is_lmb_down = *button == MouseButton::Left && *state == ElementState::Pressed;
-                mouse.is_mmb_down = *button == MouseButton::Middle && *state == ElementState::Pressed;
-                mouse.is_rmb_down = *button == MouseButton::Right && *state == ElementState::Pressed;
-                mouse.is_first_rmb_click = mouse.is_rmb_down;
+                if *button == MouseButton::Right && *state == ElementState::Released {
+                    self.is_first_rmb_click = true;
+                }
+
+                self.is_lmb_down = *button == MouseButton::Left && *state == ElementState::Pressed;
+                self.is_mmb_down = *button == MouseButton::Middle && *state == ElementState::Pressed;
+                self.is_rmb_down = *button == MouseButton::Right && *state == ElementState::Pressed;
+                self.is_first_rmb_click = self.is_rmb_down;
                 true
             }
 
