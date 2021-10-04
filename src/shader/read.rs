@@ -5,10 +5,15 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use log::{info};
+#[cfg(not(test))]
+use log::{info, warn};
+
+#[cfg(test)]
+use std::{println as info, println as warn};
+
 
 use crate::shader::ShaderError;
-use crate::utils::pragma_shader_name;
+use crate::utils::{pragma_shader_name, string_between};
 
 /// Read a shader file from disk and include any shaders in #pragma include(shadername.ext)
 /// TODO: Allow reading from multiple directories.
@@ -93,39 +98,61 @@ pub fn find_included_files(shader: PathBuf) -> Option<Vec<PathBuf>> {
 #[derive(Debug, Clone)]
 pub struct Part {
     source_file: PathBuf,
-    base_src: String,
+    shader_src: String,
+    files: Vec<PathBuf>,
 }
-pub fn t(source_file: PathBuf, col: &mut Vec<Part>) -> Part {
 
-    let base_src = read_shader_src(source_file.clone()).unwrap();
-    dbg!(&base_src);
-    let part = Part {
+pub fn t(mut shader_src: String, source_file: PathBuf, col: &mut Vec<Part>) -> Part {
+    println!("start: source file {:?}", &source_file.to_str());
+
+    let mut part = Part {
         source_file: source_file.clone(),
-        base_src: base_src.clone(),
+        shader_src: shader_src.clone(),
+        files: vec![],
     };
 
-    col.push(part.clone());
 
-    // now find any included file in the base src
-    let includes = included_files(base_src.clone());
 
-    let k:Vec<Part> = includes.iter().map(|include| {
-        let new_filename = include.to_owned();
-        source_file.parent().unwrap().join(Path::new(new_filename.as_str()))
-    })
-        .map(|a| t(a, col))
-        .collect();
+    // find all included files in this particular file
+
+    // for each included file extract their sources and file paths
+
+    // for each included file add the extracted source into the parent
+
+    // return modified source and path
+
+    let includes : Vec<(PathBuf, String)> = included_files(source_file.clone(), shader_src.clone());
+    println!("includes => {:?}", includes);
+    for (inc_shader_path, inc_shader_filename) in includes.iter() {
+
+        let included_src = read_from_file(inc_shader_path.to_owned()).unwrap();
+        let string_to_replace = format!("#pragma include({})", inc_shader_filename);
+        shader_src = shader_src.replace(string_to_replace.as_str(), included_src.as_str());
+
+        part.files.push(inc_shader_path.to_owned());
+        part.shader_src = shader_src.clone();
+
+        col.push(part.clone());
+        println!("recurse src {:?} path {:?}", included_src.as_str(), inc_shader_path.as_os_str());
+        t(included_src, inc_shader_path.to_owned(), col);
+    }
 
     part
 }
 
 
 /// NOTE TEST
-pub fn included_files(source: String) -> Vec<String> {
+pub fn included_files(parent_path: PathBuf, source: String) -> Vec<(PathBuf, String)> {
     source
         .lines()
         .filter(|line| is_include_line(line.trim_start()))
         .map(pragma_shader_name)
+        .map(|shader_name|
+             (
+                 parent_path.parent().unwrap().join(Path::new(shader_name.as_str())),
+                 shader_name,
+             )
+        )
         .collect()
 }
 
