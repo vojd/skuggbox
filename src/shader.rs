@@ -27,6 +27,18 @@ const VERTEX_SHADER: &str = "#version 330 core
     }
     ";
 
+const USE_SKUGGBOX_CAMERA: &str = "#ifdef USE_SKUGGBOX_CAMERA
+    uniform mat4 sbCameraTransform;
+    void skuggbox_camera(vec2 uv, inout vec3 ro, inout vec3 rd) {
+        ro = sbCameraTransform[3].xyz;
+        rd = mat3(sbCameraTransform) * normalize(vec3(uv, 1));
+    }
+    #else
+    void skuggbox_camera(vec2 uv, inout vec3 ro, inout vec3 rd) {
+        // empty
+    }
+    #endif";
+
 impl Shader {
     pub fn from_file(
         source_file: PathBuf,
@@ -74,12 +86,17 @@ fn read_from_file(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
     for line in s.lines() {
         if is_include_line(line.trim_start()) {
             let shader_name = pragma_shader_name(line);
-            let path = source_file
-                .parent()
-                .expect("Could not read path from shader source file");
-            let import_source_file = path.join(Path::new(shader_name.as_str()));
-            let k = read_shader_src(import_source_file)?;
-            includes.insert(line, k);
+            if shader_name == "skuggbox_camera" {
+                // built in camera integration
+                includes.insert(line, USE_SKUGGBOX_CAMERA.to_string());
+            } else {
+                let path = source_file
+                    .parent()
+                    .expect("Could not read path from shader source file");
+                let import_source_file = path.join(Path::new(shader_name.as_str()));
+                let k = read_shader_src(import_source_file)?;
+                includes.insert(line, k);
+            }
         }
     }
 
