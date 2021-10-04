@@ -74,8 +74,6 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &[String]) {
     );
 
     for path in &valid_paths {
-        println!("parent {:?}", path.to_str().unwrap());
-
         let parent_path = match path.as_path().parent() {
             None => PathBuf::from("./"),
             Some(parent) => PathBuf::from(parent),
@@ -103,7 +101,7 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &[String]) {
         }
     }
 
-    println!("Watching files shaders in:");
+    println!("Watching shader files in:");
     for dir in &dir_set {
         watcher
             .watch(dir.as_path(), RecursiveMode::Recursive)

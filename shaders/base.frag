@@ -7,12 +7,9 @@ out vec4 fragColor;
 uniform float iTime;
 uniform vec2 iResolution;
 // mx, my, zoom_level
-uniform vec3 iMouse;
+uniform vec4 iMouse;
 
-uniform vec3 uCamDir;
-uniform vec3 uCamPos;
-uniform vec3 uCamTarget;
-uniform vec2 uCamAngle;
+uniform mat4 sbCameraTransform;
 
 #define MAXD 200.
 #define STEPS 100
@@ -117,17 +114,10 @@ mat2 rotate2d(float theta) {
 
 void main(void) {
     vec2 uv = (2.*gl_FragCoord.xy-iResolution.xy)/iResolution.y;
-    vec2 mouseUV = uCamAngle / iResolution.xy;
+    vec2 mouseUV = iMouse.xy / iResolution.xy;
 
-    vec3 lp = uCamTarget;
-    vec3 ro = uCamPos;
-
-    // set camera radius by scroll wheel
-    float cameraRadius = 2. + iMouse.z * 0.5;
-    ro.yz = ro.yz * cameraRadius * rotate2d(mix(PI/2., 0., mouseUV.y));
-    ro.xz = ro.xz * rotate2d(mix(-PI, PI, mouseUV.x)) + vec2(lp.x, lp.z);
-
-    vec3 rd = camera(ro, lp) * normalize(vec3(uv, -1));
+    vec3 ro = sbCameraTransform[3].xyz;
+    vec3 rd = mat3(sbCameraTransform) * normalize(vec3(uv, 1));
     vec3 color = bg(ro, rd);
 
     vec2 hit = intersect(ro, rd);
