@@ -22,6 +22,7 @@ impl Shader {
         source_file: PathBuf,
         shader_type: gl::types::GLuint,
     ) -> anyhow::Result<Shader, ShaderError> {
+        // TODO: replace with the new importer
         let source = read_from_file(source_file)?;
         let id = shader_from_string(source, shader_type)?;
         Ok(Shader { id })

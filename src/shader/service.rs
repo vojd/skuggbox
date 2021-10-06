@@ -1,9 +1,9 @@
-use std::path::{PathBuf};
 use log::{error, info};
+use std::path::PathBuf;
 
-use crate::shader::{Shader, ShaderError, find_included_files};
+use crate::shader::{find_included_files, Shader, ShaderError};
 use crate::uniforms::{read_uniforms, Uniform};
-use crate::utils::{cstr_with_len};
+use crate::utils::cstr_with_len;
 
 const VERTEX_SHADER: &str = "#version 330 core
     layout (location = 0) in vec3 position;
