@@ -24,6 +24,7 @@ pub fn string_between<'v>(value: &'v str, start: &str, end: &str) -> &'v str {
 }
 
 /// Returns the shader name to be imported on a line of shader code
+/// TODO: Shall return &str
 pub fn pragma_shader_name(line: &str) -> String {
     let shader_name = string_between(line, "include(", ")");
     shader_name.replace("'", "").replace("\"", "")
