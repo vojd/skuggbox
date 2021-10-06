@@ -4,6 +4,7 @@ extern crate winit;
 use std::ffi::CString;
 use std::sync::mpsc::channel;
 use std::{env, process, thread};
+use std::path::PathBuf;
 
 use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
 use winit::{
@@ -28,6 +29,7 @@ use glam::Vec2;
 use log::debug;
 use log::error;
 use log::info;
+use crate::minime::{find_minime_tool, Minime};
 
 mod buffer;
 mod camera;
@@ -38,6 +40,7 @@ mod state;
 mod timer;
 mod uniforms;
 mod utils;
+mod minime;
 
 #[allow(unused_macros)]
 macro_rules! gl_error {
@@ -84,6 +87,19 @@ struct WorldState {
 
 fn main() {
     SimpleLogger::new().init().unwrap();
+
+
+    let minime_tool : Option<Minime> = find_minime_tool();
+    match minime_tool {
+        Some(m) => {
+            match m.preprocess(PathBuf::from("shaders/camera_integration.glsl"), true) {
+                Some(txt) => info!("OUTPUT: {}", txt),
+                None => ()
+            }
+        },
+        None => // Do normal read flow
+            ()
+    };
 
     // collect and verify arguments
     let args: Vec<String> = env::args().collect();
