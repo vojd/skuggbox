@@ -29,6 +29,10 @@ pub fn pragma_shader_name(line: &str) -> String {
     shader_name.replace("'", "").replace("\"", "")
 }
 
+pub fn include_statement_from_string(shader_name: String) -> String {
+    format!("#pragma include({});", shader_name)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{pragma_shader_name, string_between};
