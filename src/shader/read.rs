@@ -175,6 +175,9 @@ pub struct Includer {
     main_shader_path: PathBuf,
     main_shader_src: String,
     parts: BTreeMap<String, Part>,
+
+    // contains the final shader
+    pub(crate) shader_src: String,
 }
 
 impl Includer {
@@ -184,6 +187,7 @@ impl Includer {
             main_shader_src: shader_src,
             main_shader_path: shader_path,
             parts: Default::default(),
+            shader_src: Default::default(),
         }
     }
 
@@ -230,6 +234,8 @@ impl Includer {
             })
             .collect::<Vec<String>>()
             .join("\n");
+
+        self.shader_src = final_shader;
     }
 
     pub fn build_include_map(&mut self, shader_path: PathBuf, shader_src: String) {

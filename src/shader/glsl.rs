@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use log::error;
 
-use crate::shader::read_from_file;
+use crate::shader::{read_from_file, Includer};
 use crate::utils::{cstr_to_str, cstr_with_len};
 
 #[derive(Debug)]
@@ -22,9 +22,11 @@ impl Shader {
         source_file: PathBuf,
         shader_type: gl::types::GLuint,
     ) -> anyhow::Result<Shader, ShaderError> {
-        // TODO: replace with the new importer
-        let source = read_from_file(source_file)?;
-        let id = shader_from_string(source, shader_type)?;
+        // TODO: move to root
+        let mut includer = Includer::new(source_file);
+        includer.process_includes();
+        let shader_src = includer.shader_src;
+        let id = shader_from_string(shader_src, shader_type)?;
         Ok(Shader { id })
     }
 
