@@ -82,6 +82,7 @@ pub struct ShaderService {
     fs: PathBuf,
     pub program: Option<ShaderProgram>,
     pub files: Vec<PathBuf>,
+    pub use_camera_integration: bool,
     uniforms: Vec<Uniform>, // TODO: Unused
 }
 
@@ -103,11 +104,14 @@ impl ShaderService {
             fs,
             program: Some(program),
             files,
+            use_camera_integration: false,
             uniforms: vec![],
         }
     }
 
     pub fn reload(&mut self) {
+        self.pre_processor.use_camera_integration = self.use_camera_integration;
+
         self.pre_processor.reload();
         match create_program(self.pre_processor.shader_src.clone()) {
             Ok(new_program) => {

@@ -23,17 +23,20 @@ use winit::window::Window;
 
 use crate::camera::{CameraModel, OrbitCamera};
 use crate::event::WindowEventHandler;
+use crate::minime::{find_minime_tool, Minime};
 use crate::mouse::Mouse;
 use crate::state::{seek, PlayMode, PlaybackControl};
 use crate::timer::Timer;
 use glam::Vec2;
 use log::debug;
+use log::info;
 
 mod buffer;
 mod camera;
 mod config;
 mod event;
 mod macros;
+mod minime;
 mod mouse;
 mod shader;
 mod state;
@@ -57,6 +60,20 @@ struct WorldState {
 
 fn main() {
     SimpleLogger::new().init().unwrap();
+
+    /*
+    let minime_tool : Option<Minime> = find_minime_tool();
+    match minime_tool {
+        Some(m) => {
+            match m.preprocess(PathBuf::from("shaders/camera_integration.glsl"), true) {
+                Some(txt) => info!("OUTPUT: {}", txt),
+                None => ()
+            }
+        },
+        None => // Do normal read flow
+            ()
+    };
+     */
 
     // Parse command line arguments using `structopt`
     let config = config::Config::from_args();
@@ -117,6 +134,7 @@ fn main() {
                 &mut timer,
                 &context,
                 &vertex_buffer,
+                &mut shader,
             );
         });
 
@@ -138,6 +156,7 @@ fn handle_events<T>(
     timer: &mut Timer,
     context: &ContextWrapper<PossiblyCurrent, Window>,
     buffer: &Buffer,
+    shader: &mut ShaderService,
 ) {
     *control_flow = ControlFlow::Poll;
     context.swap_buffers().unwrap();
@@ -193,6 +212,21 @@ fn handle_events<T>(
                                     )
                                 }
 
+                                // Feature controls
+                                VirtualKeyCode::Key1 => {
+                                    if shader.use_camera_integration {
+                                        info!("Disabling camera integration");
+                                        shader.use_camera_integration = false;
+                                        shader.reload();
+                                    }
+                                }
+                                VirtualKeyCode::Key2 => {
+                                    if !shader.use_camera_integration {
+                                        info!("Enabling camera integration. Please use '#pragma skuggbox(camera)' in your shader");
+                                        shader.use_camera_integration = true;
+                                        shader.reload();
+                                    }
+                                }
                                 VirtualKeyCode::Period => {
                                     // reset all camera settings
                                     world_state.camera = Box::from(OrbitCamera::default());

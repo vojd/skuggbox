@@ -9,7 +9,7 @@ uniform vec2 iResolution;
 // mx, my, zoom_level
 uniform vec4 iMouse;
 
-uniform mat4 sbCameraTransform;
+#pragma skuggbox(camera)
 
 #define MAXD 200.
 #define STEPS 100
@@ -116,8 +116,10 @@ void main(void) {
     vec2 uv = (2.*gl_FragCoord.xy-iResolution.xy)/iResolution.y;
     vec2 mouseUV = iMouse.xy / iResolution.xy;
 
-    vec3 ro = sbCameraTransform[3].xyz;
-    vec3 rd = mat3(sbCameraTransform) * normalize(vec3(uv, 1));
+    vec3 ro = vec3(0,0,-10);
+    vec3 rd = mat3(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1)) * normalize(vec3(uv, 1));
+    skuggbox_camera(uv, ro, rd);
+
     vec3 color = bg(ro, rd);
 
     vec2 hit = intersect(ro, rd);

@@ -44,12 +44,6 @@ impl CameraModel for OrbitCamera {
         if self.angle.y < -1.0 {
             self.angle.y = -1.0
         }
-        if self.angle.x > 1.0 {
-            self.angle.x = 1.0
-        }
-        if self.angle.y > 1.0 {
-            self.angle.y = 1.0
-        }
     }
 
     fn calculate_uniform_data(&mut self) -> Mat4 {

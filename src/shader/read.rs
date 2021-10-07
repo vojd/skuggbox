@@ -1,4 +1,5 @@
 use log::{debug, error};
+use regex::Regex;
 /// Utility functions to read shader content
 /// and produce the necessary pieces to construct a
 use std::collections::{BTreeMap, HashMap};
@@ -8,6 +9,18 @@ use std::path::{Path, PathBuf};
 
 use crate::shader::ShaderError;
 use crate::utils::{include_statement_from_string, pragma_shader_name};
+
+const USE_SKUGGBOX_CAMERA: &str = "#ifdef USE_SKUGGBOX_CAMERA
+    uniform mat4 sbCameraTransform;
+    void skuggbox_camera(vec2 uv, inout vec3 ro, inout vec3 rd) {
+        ro = sbCameraTransform[3].xyz;
+        rd = mat3(sbCameraTransform) * normalize(vec3(uv, 1));
+    }
+    #else
+    void skuggbox_camera(vec2 uv, inout vec3 ro, inout vec3 rd) {
+        // empty
+    }
+    #endif";
 
 /// Read a shader from disk, return String or ShaderError
 pub fn read_shader_src(shader_path: PathBuf) -> anyhow::Result<String, ShaderError> {
@@ -64,6 +77,9 @@ pub struct PreProcessor {
     main_shader_src: String,
     parts: BTreeMap<String, Part>,
 
+    // if the camera integration should be used or not
+    pub use_camera_integration: bool,
+
     // contains the final shader
     pub shader_src: String,
 
@@ -78,6 +94,7 @@ impl PreProcessor {
             main_shader_src: shader_src,
             main_shader_path: shader_path,
             parts: Default::default(),
+            use_camera_integration: false,
             shader_src: Default::default(),
             files: vec![],
         }
@@ -92,7 +109,30 @@ impl PreProcessor {
         };
 
         self.process_includes();
+        self.process_integrations();
         self.recreate_file_list();
+    }
+
+    pub fn process_integrations(&mut self) {
+        let camera_regex = Regex::new(r"^\s*#pragma\s+skuggbox\s*\(\s*camera\s*\)\s*$").unwrap();
+
+        self.shader_src = self
+            .shader_src
+            .lines()
+            .map(|line| {
+                if line.contains("#pragma") && camera_regex.is_match(line) {
+                    debug!("Found camera integration: {:?}", line);
+
+                    if self.use_camera_integration {
+                        return "#define USE_SKUGGBOX_CAMERA\n".to_string() + USE_SKUGGBOX_CAMERA;
+                    }
+                    return USE_SKUGGBOX_CAMERA.to_string();
+                }
+
+                line.to_string()
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
     }
 
     pub fn process_includes(&mut self) {
