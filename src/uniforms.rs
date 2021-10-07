@@ -1,5 +1,3 @@
-use log::info;
-use log::trace;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -64,14 +62,12 @@ pub enum UniformError {
 pub fn read_uniforms(shader_path: PathBuf) -> Vec<Uniform> {
     let mut uniforms: Vec<Uniform> = vec![];
 
-    trace!("Reading uniforms");
     let file = File::open(shader_path.as_os_str());
     if let Ok(f) = file {
         let f = BufReader::new(f);
 
         for line in f.lines().flatten() {
             if is_uniform(line.clone()) {
-                info!("is uniform");
                 if let Ok(uniform) = extract_uniform(line) {
                     uniforms.push(uniform);
                 };
@@ -120,8 +116,9 @@ fn extract_uniform(line: String) -> Result<Uniform, UniformError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{extract_uniform, is_uniform, GLSLType};
     use std::str::FromStr;
+
+    use super::{extract_uniform, is_uniform, GLSLType};
 
     #[test]
     fn is_uniform_line() {
