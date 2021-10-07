@@ -23,26 +23,26 @@ use winit::window::Window;
 
 use crate::camera::{CameraModel, OrbitCamera};
 use crate::event::WindowEventHandler;
+use crate::minime::{find_minime_tool, Minime};
 use crate::mouse::Mouse;
 use crate::state::{seek, PlayMode, PlaybackControl};
 use crate::timer::Timer;
 use glam::Vec2;
 use log::debug;
 use log::info;
-use crate::minime::{find_minime_tool, Minime};
 
 mod buffer;
 mod camera;
 mod config;
 mod event;
 mod macros;
+mod minime;
 mod mouse;
 mod shader;
 mod state;
 mod timer;
 mod uniforms;
 mod utils;
-mod minime;
 
 struct WorldState {
     width: i32,
@@ -134,7 +134,7 @@ fn main() {
                 &mut timer,
                 &context,
                 &vertex_buffer,
-                &mut shader
+                &mut shader,
             );
         });
 
@@ -156,7 +156,7 @@ fn handle_events<T>(
     timer: &mut Timer,
     context: &ContextWrapper<PossiblyCurrent, Window>,
     buffer: &Buffer,
-    shader: &mut ShaderService
+    shader: &mut ShaderService,
 ) {
     *control_flow = ControlFlow::Poll;
     context.swap_buffers().unwrap();

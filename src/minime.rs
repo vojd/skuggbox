@@ -9,7 +9,6 @@ pub struct Minime {
     preprocessor: PathBuf,
 }
 
-
 impl Minime {
     pub fn new(preprocessor: PathBuf) -> Minime {
         Minime { preprocessor }
@@ -30,14 +29,16 @@ impl Minime {
             .expect("Failed to invoke minime-preprocessor");
 
         if !output.status.success() {
-            error!("ERROR: Minime failed with error: {}", String::from_utf8(output.stderr).unwrap());
+            error!(
+                "ERROR: Minime failed with error: {}",
+                String::from_utf8(output.stderr).unwrap()
+            );
             return None;
         }
 
         Some(String::from_utf8(output.stdout).unwrap())
     }
 }
-
 
 pub fn find_minime_tool() -> Option<Minime> {
     match which("minime-preprocess") {

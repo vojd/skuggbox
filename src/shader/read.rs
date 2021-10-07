@@ -1,11 +1,11 @@
 use log::{debug, error};
+use regex::Regex;
 /// Utility functions to read shader content
 /// and produce the necessary pieces to construct a
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use regex::Regex;
 
 use crate::shader::ShaderError;
 use crate::utils::{include_statement_from_string, pragma_shader_name};
@@ -116,14 +116,15 @@ impl PreProcessor {
     pub fn process_integrations(&mut self) {
         let camera_regex = Regex::new(r"^\s*#pragma\s+skuggbox\s*\(\s*camera\s*\)\s*$").unwrap();
 
-        self.shader_src = self.shader_src
+        self.shader_src = self
+            .shader_src
             .lines()
             .map(|line| {
                 if line.contains("#pragma") && camera_regex.is_match(line) {
                     debug!("Found camera integration: {:?}", line);
 
                     if self.use_camera_integration {
-                       return "#define USE_SKUGGBOX_CAMERA\n".to_string() + USE_SKUGGBOX_CAMERA;
+                        return "#define USE_SKUGGBOX_CAMERA\n".to_string() + USE_SKUGGBOX_CAMERA;
                     }
                     return USE_SKUGGBOX_CAMERA.to_string();
                 }
