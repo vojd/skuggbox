@@ -134,6 +134,7 @@ fn main() {
 
     let mut shader = ShaderService::new(config.fragment_shader);
 
+    // TODO: Ensure we only watch the files currently in the shader
     let files = shader.files.clone();
     let _ = thread::spawn(move || {
         glsl_watcher::watch_all(sender, files);

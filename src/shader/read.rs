@@ -1,3 +1,4 @@
+use log::{debug, error};
 /// Utility functions to read shader content
 /// and produce the necessary pieces to construct a
 use std::collections::{BTreeMap, HashMap};
@@ -5,58 +6,8 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-#[cfg(not(test))]
-use log::{info, warn};
-
-#[cfg(test)]
-use std::{println as info, println as warn};
-
 use crate::shader::ShaderError;
-use crate::utils::{include_statement_from_string, pragma_shader_name, string_between};
-use std::borrow::{Borrow, BorrowMut};
-use std::convert::TryInto;
-
-/// Read a shader file from disk and include any shaders in #pragma include(shadername.ext)
-/// TODO: Allow reading from multiple directories.
-/// 1. Read from system dir
-/// 2. Read from project dir
-/// TODO: REMOVE
-pub fn read_from_file(source_file: PathBuf) -> anyhow::Result<String, ShaderError> {
-    let s = read_shader_src(source_file.clone())?;
-
-    // Find potential include files
-    let mut includes = HashMap::<&str, String>::new();
-    for line in s.lines() {
-        if is_include_line(line.trim_start()) {
-            let shader_name = pragma_shader_name(line);
-            let path = source_file
-                .parent()
-                .expect("Could not read path from shader source file");
-            let import_source_file = path.join(Path::new(shader_name.as_str()));
-            let k = read_shader_src(import_source_file)?;
-            includes.insert(line, k);
-        }
-    }
-
-    if includes.is_empty() {
-        return Ok(s);
-    }
-
-    // Do the actual inclusion
-    let k: String = s
-        .lines()
-        .map(|line| {
-            if includes.contains_key(line) {
-                info!("including {:?}", line);
-                format!("{}\n", includes.get(line).unwrap())
-            } else {
-                format!("{}\n", line)
-            }
-        })
-        .collect();
-
-    Ok(k)
-}
+use crate::utils::{include_statement_from_string, pragma_shader_name};
 
 /// Read a shader from disk, return String or ShaderError
 pub fn read_shader_src(shader_path: PathBuf) -> anyhow::Result<String, ShaderError> {
@@ -108,96 +59,48 @@ pub struct Part {
     pub parent_src: String,
 }
 
-/// Traverse the #pragma includes through recursion
-/// Write a hashmap to be used for actual inclusion of files
-/// TODO: Error handling
-pub fn build_include_map(
-    shader_path: PathBuf,
-    mut shader_src: String,
-    result: &mut HashMap<String, Part>,
-) {
-    included_files(shader_path.clone(), shader_src.clone())
-        .iter()
-        .for_each(|(inc_path, inc_name)| {
-            let inc_src = read_shader_src(inc_path.to_owned()).unwrap();
-            let part = Part {
-                shader_path: inc_path.to_owned(),
-                shader_src: inc_src.to_owned(),
-                shader_name: inc_name.to_owned(),
-                parent_path: shader_path.to_owned(),
-                parent_src: shader_src.to_owned(),
-            };
-            result.insert(inc_name.to_owned(), part.clone());
-            build_include_map(
-                part.to_owned().shader_path,
-                part.to_owned().shader_src,
-                result,
-            );
-        });
-}
-
-/// Find #pragma include directives in a shader and return path and shader name to included files
-pub fn included_files(parent_path: PathBuf, source: String) -> Vec<(PathBuf, String)> {
-    let included = source
-        .lines()
-        .filter(|line| is_include_line(line.trim_start()))
-        .map(pragma_shader_name)
-        .map(|shader_name| {
-            (
-                parent_path
-                    .parent()
-                    .unwrap()
-                    .join(Path::new(shader_name.as_str()))
-                    .canonicalize()
-                    .unwrap(),
-                shader_name,
-            )
-        })
-        .collect();
-
-    included
-}
-
-// TODO: Use this to reduce read cost
-pub fn scan_for_includes(lines: Vec<&str>) -> HashMap<usize, &str> {
-    let mut includes: HashMap<usize, &str> = HashMap::new();
-
-    for (i, &line) in lines.iter().enumerate() {
-        if is_include_line(line) {
-            println!(">> {:?}, {:?}", i, line);
-            includes.insert(i, line);
-        }
-    }
-    includes
-}
-
-pub struct Includer {
+pub struct PreProcessor {
     main_shader_path: PathBuf,
     main_shader_src: String,
     parts: BTreeMap<String, Part>,
 
     // contains the final shader
-    pub(crate) shader_src: String,
+    pub shader_src: String,
+
+    // The files which makes up the content of this shader
+    pub files: Vec<PathBuf>,
 }
 
-impl Includer {
+impl PreProcessor {
     pub fn new(shader_path: PathBuf) -> Self {
-        let mut shader_src = read_shader_src(shader_path.clone()).unwrap();
+        let shader_src = read_shader_src(shader_path.clone()).unwrap();
         Self {
             main_shader_src: shader_src,
             main_shader_path: shader_path,
             parts: Default::default(),
             shader_src: Default::default(),
+            files: vec![],
         }
+    }
+
+    pub fn reload(&mut self) {
+        match read_shader_src(self.main_shader_path.clone()) {
+            Ok(src) => self.main_shader_src = src,
+            Err(e) => {
+                error!("Could not re-compile shader {:?}", e)
+            }
+        };
+
+        self.process_includes();
+        self.recreate_file_list();
     }
 
     pub fn process_includes(&mut self) {
         self.build_include_map(self.main_shader_path.clone(), self.main_shader_src.clone());
 
-        let mut newmap: HashMap<String, String> = HashMap::new();
-        // now go through the parts and inject all existing code into the right places
+        let mut include_map: HashMap<String, String> = HashMap::new();
+        // Go through all parts to be included and build up a new map
         for (include_name, part) in self.parts.iter() {
-
             let part_src = part.shader_src.clone();
 
             // find the includes in this particular part src
@@ -217,7 +120,7 @@ impl Includer {
                 .collect::<Vec<String>>()
                 .join("\n");
 
-            newmap.insert(include_name.to_owned(), s);
+            include_map.insert(include_name.to_owned(), s);
         }
 
         let final_shader = self
@@ -226,8 +129,8 @@ impl Includer {
             .map(|line| {
                 if is_include_line(line) {
                     let pragma_statement = pragma_shader_name(line);
-                    dbg!(&pragma_statement);
-                    newmap.get(&pragma_statement).unwrap().to_owned()
+                    debug!("including: {:?}", pragma_statement);
+                    include_map.get(&pragma_statement).unwrap().to_owned()
                 } else {
                     line.to_string()
                 }
@@ -239,14 +142,14 @@ impl Includer {
     }
 
     pub fn build_include_map(&mut self, shader_path: PathBuf, shader_src: String) {
-        included_files(shader_path.clone(), shader_src.clone())
+        self.included_files(shader_path.clone(), shader_src.clone())
             .iter()
             .for_each(|(inc_path, inc_name)| {
                 let inc_src = read_shader_src(inc_path.to_owned()).unwrap();
 
                 let part = Part {
                     shader_path: inc_path.to_owned(),
-                    shader_src: inc_src.to_owned(),
+                    shader_src: inc_src,
                     shader_name: inc_name.to_owned(),
                     parent_path: shader_path.to_owned(),
                     parent_src: shader_src.to_owned(),
@@ -254,7 +157,35 @@ impl Includer {
 
                 self.parts.insert(inc_name.to_owned(), part.clone());
 
-                self.build_include_map(part.to_owned().shader_path, part.to_owned().shader_src);
+                self.build_include_map(part.to_owned().shader_path, part.shader_src);
             });
+    }
+
+    /// Find #pragma include directives in a shader and return path and shader name to included files
+    pub fn included_files(&self, parent_path: PathBuf, source: String) -> Vec<(PathBuf, String)> {
+        source
+            .lines()
+            .filter(|line| is_include_line(line.trim_start()))
+            .map(pragma_shader_name)
+            .map(|shader_name| {
+                (
+                    parent_path
+                        .parent()
+                        .unwrap()
+                        .join(Path::new(shader_name.as_str()))
+                        .canonicalize()
+                        .unwrap(),
+                    shader_name,
+                )
+            })
+            .collect()
+    }
+
+    pub fn recreate_file_list(&mut self) {
+        self.files = self
+            .parts
+            .iter()
+            .map(|(_, part)| part.shader_path.clone())
+            .collect::<Vec<PathBuf>>();
     }
 }

@@ -1,7 +1,7 @@
 use log::{error, info};
 use std::path::PathBuf;
 
-use crate::shader::{find_included_files, Shader, ShaderError};
+use crate::shader::{find_included_files, PreProcessor, Shader, ShaderError};
 use crate::uniforms::{read_uniforms, Uniform};
 use crate::utils::cstr_with_len;
 
@@ -12,9 +12,9 @@ const VERTEX_SHADER: &str = "#version 330 core
     }
     ";
 
-pub fn create_program(fragment_path: PathBuf) -> Result<ShaderProgram, ShaderError> {
+pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError> {
     let vertex_shader = Shader::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
-    let frag_shader = Shader::from_file(fragment_path, gl::FRAGMENT_SHADER)?;
+    let frag_shader = Shader::from_source(fragment_src, gl::FRAGMENT_SHADER)?;
     info!(
         "Creating shader program: {} {}",
         vertex_shader.id, frag_shader.id
@@ -78,6 +78,7 @@ impl Drop for ShaderProgram {
 }
 
 pub struct ShaderService {
+    pre_processor: Box<PreProcessor>,
     fs: PathBuf,
     pub program: Option<ShaderProgram>,
     pub files: Vec<PathBuf>,
@@ -86,9 +87,11 @@ pub struct ShaderService {
 
 impl ShaderService {
     pub fn new(fs: PathBuf) -> Self {
+        let mut pre_processor = PreProcessor::new(fs.clone());
+        pre_processor.reload();
         // NOTE: unwrapping here until we have UI
         // Need to be able to recreate the shader service when user fixes the error
-        let program = create_program(fs.clone()).unwrap();
+        let program = create_program(pre_processor.shader_src.clone()).unwrap();
         let files = if let Some(f) = find_included_files(fs.clone()) {
             vec![fs.clone(), f.iter().collect()]
         } else {
@@ -96,6 +99,7 @@ impl ShaderService {
         };
 
         Self {
+            pre_processor: pre_processor.into(),
             fs,
             program: Some(program),
             files,
@@ -104,7 +108,8 @@ impl ShaderService {
     }
 
     pub fn reload(&mut self) {
-        match create_program(self.fs.clone()) {
+        self.pre_processor.reload();
+        match create_program(self.pre_processor.shader_src.clone()) {
             Ok(new_program) => {
                 self.program = Some(new_program);
                 self.uniforms = read_uniforms(self.fs.clone());
