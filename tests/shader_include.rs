@@ -1,6 +1,4 @@
-use skuggbox::include_statement_from_string;
 use skuggbox::shader::*;
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[test]
