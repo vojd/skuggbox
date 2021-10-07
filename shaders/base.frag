@@ -9,7 +9,7 @@ uniform vec2 iResolution;
 // mx, my, zoom_level
 uniform vec4 iMouse;
 
-#pragma include(skuggbox_camera)
+#pragma skuggbox(camera)
 
 #define MAXD 200.
 #define STEPS 100
