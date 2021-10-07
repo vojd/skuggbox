@@ -1,11 +1,9 @@
 #![warn(clippy::all)]
 #![warn(rust_2018_idioms)]
 
-use std::collections::HashSet;
 use std::fs;
-use std::iter::FromIterator;
 use std::path::PathBuf;
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::Duration;
 
 use notify::{raw_watcher, Op, RawEvent, RecursiveMode, Watcher};
@@ -61,54 +59,31 @@ pub fn watch(sender: Sender<bool>, dir: &str, vs: &str, fs: &str) {
 /// `sender` - std::sync::mpsc::channel
 /// `files` - Which files to watch
 ///
-pub fn watch_all(sender: Sender<PathBuf>, files: &[String]) {
+pub fn watch_all(sender: Sender<PathBuf>, files: Vec<PathBuf>) {
     let (watch_sender, watch_receiver) = channel();
     let mut watcher = raw_watcher(watch_sender).unwrap();
 
-    let mut dir_set: HashSet<PathBuf> = HashSet::new();
-    let valid_paths: HashSet<PathBuf> = HashSet::from_iter(
-        files
-            .iter()
-            .map(|file| PathBuf::from(file.clone()))
-            .map(|path| fs::canonicalize(path).unwrap()),
-    );
+    let directories: Vec<PathBuf> = files
+        .iter()
+        .filter_map(|p| fs::canonicalize(p).ok())
+        .collect();
 
-    for path in &valid_paths {
-        let parent_path = match path.as_path().parent() {
-            None => PathBuf::from("./"),
-            Some(parent) => PathBuf::from(parent),
-        };
-
-        let mut insert = true;
-
-        dir_set.retain(|existing_dir| {
-            if existing_dir.starts_with(&parent_path) {
-                // a directory in the set is a child to the current directory, remote it
-                return false;
-            }
-
-            if parent_path.starts_with(&existing_dir) {
-                // the directory is already represented in the set
-                // either by the exact path or by a parent directory, don't add the new path
-                insert = false;
-            }
-
-            true
-        });
-
-        if insert {
-            dir_set.insert(parent_path);
-        }
-    }
-
-    println!("Watching shader files in:");
-    for dir in &dir_set {
+    println!("Watching files shaders in:");
+    for dir in &directories {
         watcher
             .watch(dir.as_path(), RecursiveMode::Recursive)
             .unwrap();
         println!("   {:?}", dir);
     }
 
+    watch_loop(sender, watch_receiver, directories);
+}
+
+fn watch_loop(
+    sender: Sender<PathBuf>,
+    watch_receiver: Receiver<RawEvent>,
+    directories: Vec<PathBuf>,
+) {
     loop {
         // NOTE: It's likely that a change to a file will trigger two successive WRITE events
         let changed_file = match watch_receiver.recv() {
@@ -119,14 +94,13 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &[String]) {
             }) => {
                 let file_name = path.file_name().unwrap().to_str().unwrap();
                 println!("on change in: {:?}", path.to_str().unwrap());
-                if op == Op::WRITE && valid_paths.contains(&path) {
+                if op == Op::WRITE && directories.contains(&path) {
                     println!("change in: {:?}", file_name);
                     Some(path)
                 } else {
                     None
                 }
             }
-
             Ok(event) => {
                 println!("broken event: {:?}", event);
                 None
@@ -137,8 +111,8 @@ pub fn watch_all(sender: Sender<PathBuf>, files: &[String]) {
             }
         };
 
-        if changed_file.is_some() {
-            sender.send(changed_file.unwrap()).unwrap();
+        if let Some(cf) = changed_file {
+            sender.send(cf).unwrap();
         }
 
         std::thread::sleep(Duration::from_millis(10));
