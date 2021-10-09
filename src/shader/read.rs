@@ -64,6 +64,12 @@ pub fn find_included_files(shader: PathBuf) -> Option<Vec<PathBuf>> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum PragmaDirective {
+    Include,
+    Camera(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Part {
     pub shader_path: PathBuf,
     pub shader_src: String,
@@ -113,23 +119,28 @@ impl PreProcessor {
         self.recreate_file_list();
     }
 
-    pub fn process_integrations(&mut self) {
+    pub fn process_pragma(&self, line: &str) -> Option<PragmaDirective> {
         let camera_regex = Regex::new(r"^\s*#pragma\s+skuggbox\s*\(\s*camera\s*\)\s*$").unwrap();
 
+        if line.contains("#pragma") && camera_regex.is_match(line) {
+            debug!("Found camera integration: {:?}", line);
+
+            let pragma_content = match self.use_camera_integration {
+                true => "#define USE_SKUGGBOX_CAMERA\n".to_string() + USE_SKUGGBOX_CAMERA,
+                _ => USE_SKUGGBOX_CAMERA.to_string(),
+            };
+            return Some(PragmaDirective::Camera(pragma_content));
+        }
+        None
+    }
+
+    pub fn process_integrations(&mut self) {
         self.shader_src = self
             .shader_src
             .lines()
-            .map(|line| {
-                if line.contains("#pragma") && camera_regex.is_match(line) {
-                    debug!("Found camera integration: {:?}", line);
-
-                    if self.use_camera_integration {
-                        return "#define USE_SKUGGBOX_CAMERA\n".to_string() + USE_SKUGGBOX_CAMERA;
-                    }
-                    return USE_SKUGGBOX_CAMERA.to_string();
-                }
-
-                line.to_string()
+            .map(|line| match self.process_pragma(&line) {
+                Some(PragmaDirective::Camera(content)) => content,
+                _ => line.to_string(),
             })
             .collect::<Vec<String>>()
             .join("\n");
