@@ -7,5 +7,5 @@ pub trait WindowEventHandler {
     /// otherwise false.
     /// * `self` - A mutable reference to the implementation
     /// * `event` - The event to react to
-    fn handle_window_events(&mut self, event: &WindowEvent) -> bool;
+    fn handle_window_events(&mut self, event: &WindowEvent<'_>) -> bool;
 }
