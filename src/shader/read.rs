@@ -129,7 +129,7 @@ impl PreProcessor {
         self.shader_src = self
             .shader_src
             .lines()
-            .map(|line| match self.process_pragma(&line) {
+            .map(|line| match self.process_pragma(line) {
                 Some(PragmaDirective::Camera(content)) => content,
                 _ => line.to_string(),
             })
