@@ -54,7 +54,6 @@ pub fn find_included_files(shader: PathBuf) -> Option<Vec<PathBuf>> {
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum PragmaDirective {
-    Include,
     Camera(String),
 }
 
