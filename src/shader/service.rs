@@ -1,16 +1,10 @@
 use log::{error, info};
 use std::path::PathBuf;
 
+use crate::shader::VERTEX_SHADER;
 use crate::shader::{find_included_files, PreProcessor, Shader, ShaderError};
 use crate::uniforms::{read_uniforms, Uniform};
 use crate::utils::cstr_with_len;
-
-const VERTEX_SHADER: &str = "#version 330 core
-    layout (location = 0) in vec3 position;
-    void main() {
-        gl_Position = vec4(position, 1.0);
-    }
-    ";
 
 pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError> {
     let vertex_shader = Shader::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;

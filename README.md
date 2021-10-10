@@ -1,8 +1,8 @@
-# skuggbox-rs
+# skuggbox
 
 ```bash
 
-cargo run --release
+cargo run --release -- -f ./path/to/shader.glsl
 
 ## with cargo watch
 

@@ -31,7 +31,7 @@ impl Default for Mouse {
 }
 
 impl WindowEventHandler for Mouse {
-    fn handle_window_events(&mut self, event: &WindowEvent) -> bool {
+    fn handle_window_events(&mut self, event: &WindowEvent<'_>) -> bool {
         match event {
             WindowEvent::CursorMoved { position, .. } => {
                 if self.is_rmb_down {

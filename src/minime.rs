@@ -1,8 +1,7 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-use log::error;
-use log::warn;
+use log::{error, warn};
 use which::which;
 
 pub struct Minime {

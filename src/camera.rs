@@ -65,7 +65,7 @@ impl CameraModel for OrbitCamera {
 }
 
 impl WindowEventHandler for OrbitCamera {
-    fn handle_window_events(&mut self, event: &WindowEvent) -> bool {
+    fn handle_window_events(&mut self, event: &WindowEvent<'_>) -> bool {
         match event {
             WindowEvent::MouseWheel { delta, .. } => {
                 self.zoom -= match delta {
