@@ -2,8 +2,12 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "skuggbox", about = "Skuggbox usage")]
+#[structopt(
+    name = "skuggbox",
+    about = "Skuggbox usage",
+)]
 pub struct Config {
-    #[structopt(long, short)]
-    pub fragment_shader: PathBuf,
+    /// Shader to load
+    #[structopt(name = "FILE", parse(from_os_str))]
+    pub file: PathBuf,
 }

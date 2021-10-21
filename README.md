@@ -2,7 +2,7 @@
 
 ```bash
 
-cargo run --release -- -f ./path/to/shader.glsl
+cargo run --release -- ./path/to/shader.glsl
 
 ## with cargo watch
 
