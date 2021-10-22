@@ -2,12 +2,12 @@ extern crate gl;
 extern crate glutin;
 extern crate winit;
 
+use clap::Parser;
 use std::ffi::CString;
 use std::sync::mpsc::channel;
 use std::thread;
 
 use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
-use structopt::StructOpt;
 
 use simple_logger::SimpleLogger;
 use winit::{
@@ -22,24 +22,14 @@ use skuggbox::{
     handle_events,
     shader::{ShaderProgram, ShaderService},
     state::{AppState, PlayMode},
-    timer::Timer,
+    timer::Timer
 };
 
 fn main() {
     SimpleLogger::new().init().unwrap();
 
-    /*
-    if let Some(minime_tool) = find_minime_tool() {
-        if let Some(txt) =
-            minime_tool.preprocess(PathBuf::from("shaders/camera_integration.glsl"), true)
-        {
-            info!("OUTPUT: {}", txt);
-        };
-    }
-    */
-
     // Parse command line arguments using `structopt`
-    let config = Config::from_args();
+    let config = Config::parse();
 
     // verify that all specified file does exist
     let mut timer = Timer::new();
