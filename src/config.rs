@@ -6,5 +6,4 @@ pub struct Config {
     /// GLSL shader file to load
     #[clap(name = "FILE", parse(from_os_str))]
     pub file: PathBuf,
-
 }

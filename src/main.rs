@@ -22,7 +22,7 @@ use skuggbox::{
     handle_events,
     shader::{ShaderProgram, ShaderService},
     state::{AppState, PlayMode},
-    timer::Timer
+    timer::Timer,
 };
 
 fn main() {
