@@ -1,9 +1,9 @@
 use std::path::PathBuf;
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "skuggbox", about = "Skuggbox usage")]
+#[derive(clap::Parser, Debug)]
+#[clap(name = "skuggbox", about = "Skuggbox GLSL shader viewer")]
 pub struct Config {
-    #[structopt(long, short)]
-    pub fragment_shader: PathBuf,
+    /// GLSL shader file to load
+    #[clap(name = "FILE", parse(from_os_str))]
+    pub file: PathBuf,
 }

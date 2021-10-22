@@ -2,13 +2,12 @@ extern crate gl;
 extern crate glutin;
 extern crate winit;
 
+use clap::Parser;
 use std::ffi::CString;
-use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::thread;
 
 use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
-use structopt::StructOpt;
 
 use simple_logger::SimpleLogger;
 use winit::{
@@ -17,12 +16,10 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use log::info;
 use skuggbox::{
     buffer::Buffer,
     config::Config,
     handle_events,
-    minime::find_minime_tool,
     shader::{ShaderProgram, ShaderService},
     state::{AppState, PlayMode},
     timer::Timer,
@@ -31,16 +28,8 @@ use skuggbox::{
 fn main() {
     SimpleLogger::new().init().unwrap();
 
-    if let Some(minime_tool) = find_minime_tool() {
-        if let Some(txt) =
-            minime_tool.preprocess(PathBuf::from("shaders/camera_integration.glsl"), true)
-        {
-            info!("OUTPUT: {}", txt);
-        };
-    };
-
     // Parse command line arguments using `structopt`
-    let config = Config::from_args();
+    let config = Config::parse();
 
     // verify that all specified file does exist
     let mut timer = Timer::new();
@@ -61,7 +50,7 @@ fn main() {
     // shader compiler channel
     let (sender, receiver) = channel();
 
-    let mut shader = ShaderService::new(config.fragment_shader);
+    let mut shader = ShaderService::new(config.file);
 
     // TODO: Ensure we only watch the files currently in the shader
     let files = shader.files.clone();
