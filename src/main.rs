@@ -3,7 +3,6 @@ extern crate glutin;
 extern crate winit;
 
 use std::ffi::CString;
-use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::thread;
 
@@ -17,12 +16,10 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use log::info;
 use skuggbox::{
     buffer::Buffer,
     config::Config,
     handle_events,
-    minime::find_minime_tool,
     shader::{ShaderProgram, ShaderService},
     state::{AppState, PlayMode},
     timer::Timer,
