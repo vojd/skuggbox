@@ -58,7 +58,7 @@ pub fn handle_events<T>(
                                         PlayMode::Playing => {
                                             log::info!("Paused");
                                             PlayMode::Paused
-                                        },
+                                        }
                                         PlayMode::Paused => {
                                             log::info!("Playing");
                                             timer.start();
@@ -79,10 +79,8 @@ pub fn handle_events<T>(
                                     )
                                 }
                                 VirtualKeyCode::Key0 => {
-                                    world_state.playback_time = seek(
-                                        world_state.playback_time,
-                                        PlaybackControl::Stop,
-                                    )
+                                    world_state.playback_time =
+                                        seek(world_state.playback_time, PlaybackControl::Stop)
                                 }
                                 // Feature controls
                                 VirtualKeyCode::Key1 => {

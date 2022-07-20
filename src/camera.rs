@@ -12,11 +12,11 @@ pub trait CameraModel: WindowEventHandler {
     fn calculate_uniform_data(&mut self) -> Mat4;
 }
 
-#[derive(Debug)]
 pub struct OrbitCamera {
     pos: Vec3,
     target: Vec3,
     angle: Vec2,
+    #[allow(dead_code)]
     speed: f32,
     zoom: f32,
 }

@@ -27,7 +27,7 @@ pub fn string_between<'v>(value: &'v str, start: &str, end: &str) -> &'v str {
 /// TODO: Shall return &str
 pub fn pragma_shader_name(line: &str) -> String {
     let shader_name = string_between(line, "include(", ")");
-    shader_name.replace("'", "").replace("\"", "")
+    shader_name.replace('\'', "").replace('\"', "")
 }
 
 pub fn include_statement_from_string(shader_name: String) -> String {

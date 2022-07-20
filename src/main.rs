@@ -2,16 +2,14 @@ extern crate gl;
 extern crate glutin;
 extern crate winit;
 
-use clap::Parser;
-use std::ffi::CString;
+use std::fs;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::channel;
 use std::thread;
-use std::fs;
 
+use clap::Parser;
 use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
-
 use simple_logger::SimpleLogger;
 use winit::{
     event_loop::EventLoop,
@@ -22,31 +20,18 @@ use winit::{
 use skuggbox::{
     buffer::Buffer,
     config::Config,
-    handle_events,
-    shader::{ShaderProgram, ShaderService},
+    get_uniform_location, handle_events,
+    shader::ShaderService,
     state::{AppState, PlayMode},
     timer::Timer,
 };
 
-fn handle_init_commands(config: &Config) -> bool {
-    if config.new.is_some() {
-        log::info!("creating new shader");
-        return true;
-    }
-
-    if config.file.is_some() {
-        log::info!("loading existing shader");
-        return true;
-    }
-    return false;
-}
-
-fn create_new_shader(path: PathBuf) {
+fn create_new_shader(path: PathBuf) -> std::io::Result<u64> {
     if path.exists() {
         log::warn!("File already exists. Not overwriting it to save your life :D");
         exit(1);
     }
-    fs::copy("shaders/init.glsl", path);
+    fs::copy("shaders/init.glsl", path)
 }
 
 fn main() {
@@ -56,23 +41,22 @@ fn main() {
     let config = Config::parse();
     if let Some(new_file) = config.clone().new {
         log::info!("creating new shader at {:?}", new_file);
-        create_new_shader(new_file)
+        match create_new_shader(new_file) {
+            Ok(_) => log::info!("Done"),
+            Err(err) => {
+                log::error!("{:?}", err);
+                exit(1);
+            }
+        }
     }
 
     if config.file.is_some() {
         log::info!("loading existing shader");
-        run(config.clone());
+        run(config);
     }
 }
 
 fn run(config: Config) {
-    let shader_file = match config.clone().file {
-        None => {
-            log::info!("no shader file");
-        }
-        Some(file) => {}
-    };
-
     assert!(config.file.is_some());
 
     // verify that all specified file does exist
@@ -95,7 +79,7 @@ fn run(config: Config) {
 
     // shader compiler channel
     let (sender, receiver) = channel();
-    let shader_file = config.file.unwrap().clone();
+    let shader_file = config.file.unwrap();
     let mut shader = ShaderService::new(shader_file);
 
     // TODO: Ensure we only watch the files currently in the shader
@@ -133,11 +117,6 @@ fn run(config: Config) {
         timer.stop();
     }
 
-    #[allow(temporary_cstring_as_ptr)]
-    fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
-        unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
-    }
-
     fn render(
         context: &ContextWrapper<PossiblyCurrent, Window>,
         state: &mut AppState,
@@ -162,7 +141,11 @@ fn run(config: Config) {
 
             // viewport resolution in pixels
             // let location = get_uniform_location(program, "iResolution");
-            gl::Uniform2f(shaders.locations.resolution, state.width as f32, state.height as f32);
+            gl::Uniform2f(
+                shaders.locations.resolution,
+                state.width as f32,
+                state.height as f32,
+            );
 
             // let location = get_uniform_location(program, "iTime");
             gl::Uniform1f(shaders.locations.time, state.playback_time);

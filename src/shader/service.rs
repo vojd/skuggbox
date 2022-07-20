@@ -1,5 +1,5 @@
-use std::ffi::CString;
 use log::{error, info};
+use std::ffi::CString;
 use std::path::PathBuf;
 
 use crate::shader::VERTEX_SHADER;
@@ -91,7 +91,7 @@ pub struct ShaderService {
 }
 
 #[allow(temporary_cstring_as_ptr)]
-fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
+pub fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
     unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
 }
 
