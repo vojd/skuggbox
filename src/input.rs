@@ -55,8 +55,12 @@ pub fn handle_events<T>(
                                 // Timeline controls
                                 VirtualKeyCode::Space => {
                                     world_state.play_mode = match world_state.play_mode {
-                                        PlayMode::Playing => PlayMode::Paused,
+                                        PlayMode::Playing => {
+                                            log::info!("Paused");
+                                            PlayMode::Paused
+                                        },
                                         PlayMode::Paused => {
+                                            log::info!("Playing");
                                             timer.start();
                                             PlayMode::Playing
                                         }
@@ -74,7 +78,12 @@ pub fn handle_events<T>(
                                         PlaybackControl::Rewind(1.0),
                                     )
                                 }
-
+                                VirtualKeyCode::Key0 => {
+                                    world_state.playback_time = seek(
+                                        world_state.playback_time,
+                                        PlaybackControl::Stop,
+                                    )
+                                }
                                 // Feature controls
                                 VirtualKeyCode::Key1 => {
                                     if shader.use_camera_integration {

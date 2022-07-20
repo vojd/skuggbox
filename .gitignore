@@ -16,3 +16,5 @@ Cargo.lock
 
 # Random directories and files used during development  or otherwise
 /projects/
+
+tmp/
