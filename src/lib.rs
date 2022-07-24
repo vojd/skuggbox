@@ -1,5 +1,6 @@
 #![warn(clippy::all, future_incompatible, nonstandard_style, rust_2018_idioms)]
 
+pub mod app;
 pub mod buffer;
 pub mod camera;
 pub mod config;
@@ -14,6 +15,7 @@ pub mod timer;
 pub mod uniforms;
 pub mod utils;
 
+pub use app::*;
 pub use buffer::*;
 pub use camera::*;
 pub use config::*;

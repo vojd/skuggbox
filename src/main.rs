@@ -18,6 +18,7 @@ use winit::{
 };
 
 use skuggbox::{
+    app::App,
     buffer::Buffer,
     config::Config,
     get_uniform_location, handle_events,
@@ -39,6 +40,8 @@ fn main() {
 
     // Parse command line arguments using `structopt`
     let config = Config::parse();
+    let app = App::from_config(config.clone());
+
     if let Some(new_file) = config.clone().new {
         log::info!("creating new shader at {:?}", new_file);
         match create_new_shader(new_file) {
@@ -52,7 +55,7 @@ fn main() {
 
     if config.file.is_some() {
         log::info!("loading existing shader");
-        run(config);
+        app.run(config);
     }
 }
 
