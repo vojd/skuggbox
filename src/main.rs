@@ -19,7 +19,7 @@ fn create_new_shader(path: PathBuf) -> std::io::Result<u64> {
     fs::copy("shaders/init.glsl", path)
 }
 
-fn main() {
+fn main() -> anyhow::Result<(), anyhow::Error> {
     SimpleLogger::new().init().unwrap();
 
     // Parse command line arguments using `structopt`
@@ -39,6 +39,7 @@ fn main() {
 
     if config.file.is_some() {
         log::info!("loading existing shader");
-        app.run(config);
+        app.run(config)?;
     }
+    Ok(())
 }

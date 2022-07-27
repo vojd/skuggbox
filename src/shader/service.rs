@@ -1,6 +1,8 @@
 use log::{error, info};
 use std::ffi::CString;
 use std::path::PathBuf;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread;
 
 use crate::shader::VERTEX_SHADER;
 use crate::shader::{find_included_files, PreProcessor, Shader, ShaderError};
@@ -72,6 +74,20 @@ impl Drop for ShaderProgram {
     }
 }
 
+#[allow(temporary_cstring_as_ptr)]
+pub fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
+    unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
+}
+
+fn get_uniform_locations(program: &ShaderProgram) -> ShaderLocations {
+    ShaderLocations {
+        resolution: get_uniform_location(program, "iResolution"),
+        time: get_uniform_location(program, "iTime"),
+        time_delta: get_uniform_location(program, "iTimeDelta"),
+        mouse: get_uniform_location(program, "iMouse"),
+    }
+}
+
 #[derive(Default)]
 pub struct ShaderLocations {
     pub resolution: i32,
@@ -88,20 +104,8 @@ pub struct ShaderService {
     pub use_camera_integration: bool,
     uniforms: Vec<Uniform>, // TODO: Unused
     pub locations: ShaderLocations,
-}
 
-#[allow(temporary_cstring_as_ptr)]
-pub fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
-    unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
-}
-
-fn get_uniform_locations(program: &ShaderProgram) -> ShaderLocations {
-    ShaderLocations {
-        resolution: get_uniform_location(program, "iResolution"),
-        time: get_uniform_location(program, "iTime"),
-        time_delta: get_uniform_location(program, "iTimeDelta"),
-        mouse: get_uniform_location(program, "iMouse"),
-    }
+    receiver: Option<Receiver<PathBuf>>,
 }
 
 impl ShaderService {
@@ -126,7 +130,27 @@ impl ShaderService {
             use_camera_integration: false,
             uniforms: vec![],
             locations,
+            receiver: None,
         }
+    }
+
+    pub fn watch(&mut self) {
+        let (sender, receiver): (Sender<PathBuf>, Receiver<PathBuf>) = channel();
+
+        self.receiver = Some(receiver);
+        let files = self.files.clone();
+
+        let _ = thread::spawn(move || {
+            glsl_watcher::watch_all(sender, files);
+        });
+    }
+
+    pub fn run(&mut self) {
+        if let Some(recv) = &self.receiver {
+            if recv.try_recv().is_ok() {
+                self.reload()
+            }
+        };
     }
 
     pub fn reload(&mut self) {

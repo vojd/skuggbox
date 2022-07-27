@@ -112,8 +112,8 @@ pub fn handle_events<T>(
                 _ => {}
             }
 
-            world_state.mouse.handle_window_events(&event);
-            world_state.camera.handle_window_events(&event);
+            world_state.mouse.handle_window_events(event);
+            world_state.camera.handle_window_events(event);
             world_state
                 .camera
                 .handle_mouse(&world_state.mouse, world_state.delta_time);

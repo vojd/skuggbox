@@ -1,6 +1,3 @@
-use std::sync::mpsc::channel;
-use std::thread;
-
 use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
 use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
@@ -30,7 +27,7 @@ impl App {
         let window_context = unsafe { window_context.make_current().unwrap() };
 
         let state = crate::AppState::default();
-        
+
         Self {
             event_loop,
             window_context,
@@ -38,7 +35,7 @@ impl App {
         }
     }
 
-    pub fn run(&mut self, config: Config) {
+    pub fn run(&mut self, config: Config) -> anyhow::Result<(), anyhow::Error> {
         assert!(config.file.is_some());
 
         let App {
@@ -52,22 +49,15 @@ impl App {
         gl::load_with(|s| window_context.get_proc_address(s) as *const _);
 
         // shader compiler channel
-        let (sender, receiver) = channel();
+        // let (sender, receiver) = channel();
         let shader_file = config.file.unwrap();
-        let mut shader = ShaderService::new(shader_file);
+        let mut shader_service = ShaderService::new(shader_file);
 
-        // TODO: Ensure we only watch the files currently in the shader
-        let files = shader.files.clone();
-        let _ = thread::spawn(move || {
-            glsl_watcher::watch_all(sender, files);
-        });
-
+        shader_service.watch();
         let vertex_buffer = Buffer::new_vertex_buffer();
 
         while state.is_running {
-            if receiver.try_recv().is_ok() {
-                shader.reload();
-            }
+            shader_service.run();
 
             if matches!(state.play_mode, PlayMode::Playing) {
                 timer.start();
@@ -81,17 +71,19 @@ impl App {
                         control_flow,
                         state,
                         &mut timer,
-                        &window_context,
+                        window_context,
                         &vertex_buffer,
-                        &mut shader,
+                        &mut shader_service,
                     );
                 });
             }
 
-            render(&window_context, state, &shader, &vertex_buffer);
+            render(window_context, state, &shader_service, &vertex_buffer);
 
             timer.stop();
         }
+
+        Ok(())
     }
 }
 
