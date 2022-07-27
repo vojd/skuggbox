@@ -1,4 +1,5 @@
 use log::{error, info};
+use std::ffi::CString;
 use std::path::PathBuf;
 
 use crate::shader::VERTEX_SHADER;
@@ -71,6 +72,14 @@ impl Drop for ShaderProgram {
     }
 }
 
+#[derive(Default)]
+pub struct ShaderLocations {
+    pub resolution: i32,
+    pub time: i32,
+    pub time_delta: i32,
+    pub mouse: i32,
+}
+
 pub struct ShaderService {
     pre_processor: Box<PreProcessor>,
     fs: PathBuf,
@@ -78,6 +87,21 @@ pub struct ShaderService {
     pub files: Vec<PathBuf>,
     pub use_camera_integration: bool,
     uniforms: Vec<Uniform>, // TODO: Unused
+    pub locations: ShaderLocations,
+}
+
+#[allow(temporary_cstring_as_ptr)]
+pub fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
+    unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
+}
+
+fn get_uniform_locations(program: &ShaderProgram) -> ShaderLocations {
+    ShaderLocations {
+        resolution: get_uniform_location(program, "iResolution"),
+        time: get_uniform_location(program, "iTime"),
+        time_delta: get_uniform_location(program, "iTimeDelta"),
+        mouse: get_uniform_location(program, "iMouse"),
+    }
 }
 
 impl ShaderService {
@@ -92,6 +116,7 @@ impl ShaderService {
         } else {
             vec![fs.clone()]
         };
+        let locations = get_uniform_locations(&program);
 
         Self {
             pre_processor: pre_processor.into(),
@@ -100,6 +125,7 @@ impl ShaderService {
             files,
             use_camera_integration: false,
             uniforms: vec![],
+            locations,
         }
     }
 
@@ -109,6 +135,7 @@ impl ShaderService {
         self.pre_processor.reload();
         match create_program(self.pre_processor.shader_src.clone()) {
             Ok(new_program) => {
+                self.locations = get_uniform_locations(&new_program);
                 self.program = Some(new_program);
                 self.uniforms = read_uniforms(self.fs.clone());
                 info!("Shader recreated without errors")

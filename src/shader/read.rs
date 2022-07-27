@@ -3,6 +3,7 @@ use regex::Regex;
 /// Utility functions to read shader content
 /// and produce the necessary pieces to construct a
 use std::collections::{BTreeMap, HashMap};
+use std::env::current_dir;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -209,17 +210,42 @@ impl PreProcessor {
             .filter(|line| is_include_line(line.trim_start()))
             .map(pragma_shader_name)
             .map(|shader_name| {
-                (
-                    parent_path
-                        .parent()
-                        .unwrap()
-                        .join(Path::new(shader_name.as_str()))
-                        .canonicalize()
-                        .unwrap(),
-                    shader_name,
-                )
+                log::info!("loading shader: {:?}", Path::new(shader_name.as_str()));
+
+                if self.built_in_shader(shader_name.clone()) {
+                    (
+                        self.internal_shader_path()
+                            .join(Path::new(shader_name.as_str()))
+                            .canonicalize()
+                            .unwrap(),
+                        shader_name,
+                    )
+                } else {
+                    (
+                        // test built in shader
+                        parent_path
+                            .parent()
+                            .unwrap()
+                            .join(Path::new(shader_name.as_str()))
+                            .canonicalize()
+                            .unwrap(),
+                        shader_name,
+                    )
+                }
+
+                // log::debug!("{:?}", path);
             })
             .collect()
+    }
+
+    fn internal_shader_path(&self) -> PathBuf {
+        let internal_shader_path = current_dir().unwrap().as_path().join("shaders");
+        internal_shader_path
+    }
+
+    fn built_in_shader(&self, source: String) -> bool {
+        let internal_shader_path = self.internal_shader_path();
+        internal_shader_path.join(source).exists()
     }
 
     pub fn recreate_file_list(&mut self) {
