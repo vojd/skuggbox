@@ -1,18 +1,24 @@
 use std::sync::mpsc::channel;
 use std::thread;
-use glutin::{ContextBuilder, ContextWrapper, NotCurrent, PossiblyCurrent, WindowedContext};
+
+use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
 use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::{Window, WindowBuilder};
-use crate::{AppState, Buffer, Config, get_uniform_location, handle_events, ShaderService, Timer, PlayMode};
+
+use crate::{
+    get_uniform_location, handle_events, AppState, Buffer, Config, PlayMode, ShaderService, Timer,
+};
 
 pub struct App {
-    window_context: ContextWrapper<PossiblyCurrent, Window>,
+    pub event_loop: EventLoop<()>,
+    pub window_context: ContextWrapper<PossiblyCurrent, Window>,
+    pub state: AppState,
 }
 
 impl App {
     pub fn from_config(config: Config) -> Self {
-        let mut event_loop = EventLoop::new();
+        let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
             .with_title("Skuggbox")
             .with_always_on_top(config.always_on_top);
@@ -23,20 +29,27 @@ impl App {
 
         let window_context = unsafe { window_context.make_current().unwrap() };
 
+        let state = crate::AppState::default();
+        
         Self {
+            event_loop,
             window_context,
+            state,
         }
     }
 
-    pub fn run(&self, config: Config) {
+    pub fn run(&mut self, config: Config) {
         assert!(config.file.is_some());
 
-        // verify that all specified file does exist
+        let App {
+            event_loop,
+            window_context,
+            state,
+        } = self;
+
         let mut timer = Timer::new();
 
-        gl::load_with(|s| self.window_context.get_proc_address(s) as *const _);
-
-        let mut state = crate::AppState::default();
+        gl::load_with(|s| window_context.get_proc_address(s) as *const _);
 
         // shader compiler channel
         let (sender, receiver) = channel();
@@ -61,89 +74,89 @@ impl App {
                 state.delta_time = timer.delta_time;
             }
 
-            let mut event_loop = EventLoop::new();
-            event_loop.run_return(|event, _, control_flow| {
-                handle_events(
-                    event,
-                    control_flow,
-                    &mut state,
-                    &mut timer,
-                    &self.window_context,
-                    &vertex_buffer,
-                    &mut shader,
-                );
-            });
+            {
+                event_loop.run_return(|event, _, control_flow| {
+                    handle_events(
+                        &event,
+                        control_flow,
+                        state,
+                        &mut timer,
+                        &window_context,
+                        &vertex_buffer,
+                        &mut shader,
+                    );
+                });
+            }
 
-            self.render(&self.window_context, &mut state, &shader, &vertex_buffer);
+            render(&window_context, state, &shader, &vertex_buffer);
 
             timer.stop();
         }
     }
+}
 
-    fn render(
-        &self,
-        window_context: &ContextWrapper<PossiblyCurrent, Window>,
-        state: &mut AppState,
-        shaders: &ShaderService,
-        buffer: &Buffer,
-    ) {
-        unsafe {
-            gl::Viewport(0, 0, state.width, state.height);
-            gl::ClearColor(0.3, 0.3, 0.5, 1.0);
-        }
-
-        if let Some(program) = &shaders.program {
-            unsafe { gl::UseProgram(program.id) };
-        } else {
-            unsafe { gl::UseProgram(0) };
-        }
-
-        unsafe {
-            let program = shaders.program.as_ref().unwrap();
-
-            gl::UseProgram(program.id);
-
-            // viewport resolution in pixels
-            // let location = get_uniform_location(program, "iResolution");
-            gl::Uniform2f(
-                shaders.locations.resolution,
-                state.width as f32,
-                state.height as f32,
-            );
-
-            // let location = get_uniform_location(program, "iTime");
-            gl::Uniform1f(shaders.locations.time, state.playback_time);
-            // let location = get_uniform_location(program, "iTimeDelta");
-            gl::Uniform1f(shaders.locations.time_delta, state.delta_time);
-
-            // push mouse location to the shader
-            // let location = get_uniform_location(program, "iMouse");
-            gl::Uniform4f(
-                shaders.locations.mouse,
-                state.mouse.pos.x,
-                state.mouse.pos.y,
-                if state.mouse.is_lmb_down { 1.0 } else { 0.0 },
-                if state.mouse.is_rmb_down { 1.0 } else { 0.0 },
-            );
-
-            // push the camera transform to the shader
-            let transform = state.camera.calculate_uniform_data();
-            let position = transform.w_axis;
-
-            let location = get_uniform_location(program, "sbCameraPosition");
-            gl::Uniform3f(location, position.x, position.y, position.z);
-
-            let location = get_uniform_location(program, "sbCameraTransform");
-            gl::UniformMatrix4fv(location, 1, gl::FALSE, &transform.to_cols_array()[0]);
-
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-            buffer.bind();
-            gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
-
-            gl::UseProgram(0);
-        }
-
-        unsafe { gl::UseProgram(0) };
-        window_context.swap_buffers().unwrap();
+fn render(
+    window_context: &ContextWrapper<PossiblyCurrent, Window>,
+    state: &mut AppState,
+    shaders: &ShaderService,
+    buffer: &Buffer,
+) {
+    unsafe {
+        gl::Viewport(0, 0, state.width, state.height);
+        gl::ClearColor(0.3, 0.3, 0.5, 1.0);
     }
+
+    if let Some(program) = &shaders.program {
+        unsafe { gl::UseProgram(program.id) };
+    } else {
+        unsafe { gl::UseProgram(0) };
+    }
+
+    unsafe {
+        let program = shaders.program.as_ref().unwrap();
+
+        gl::UseProgram(program.id);
+
+        // viewport resolution in pixels
+        // let location = get_uniform_location(program, "iResolution");
+        gl::Uniform2f(
+            shaders.locations.resolution,
+            state.width as f32,
+            state.height as f32,
+        );
+
+        // let location = get_uniform_location(program, "iTime");
+        gl::Uniform1f(shaders.locations.time, state.playback_time);
+        // let location = get_uniform_location(program, "iTimeDelta");
+        gl::Uniform1f(shaders.locations.time_delta, state.delta_time);
+
+        // push mouse location to the shader
+        // let location = get_uniform_location(program, "iMouse");
+        gl::Uniform4f(
+            shaders.locations.mouse,
+            state.mouse.pos.x,
+            state.mouse.pos.y,
+            if state.mouse.is_lmb_down { 1.0 } else { 0.0 },
+            if state.mouse.is_rmb_down { 1.0 } else { 0.0 },
+        );
+
+        // push the camera transform to the shader
+        let transform = state.camera.calculate_uniform_data();
+        let position = transform.w_axis;
+
+        let location = get_uniform_location(program, "sbCameraPosition");
+        gl::Uniform3f(location, position.x, position.y, position.z);
+
+        let location = get_uniform_location(program, "sbCameraTransform");
+        gl::UniformMatrix4fv(location, 1, gl::FALSE, &transform.to_cols_array()[0]);
+
+        gl::Clear(gl::COLOR_BUFFER_BIT);
+        buffer.bind();
+        gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+
+        gl::UseProgram(0);
+    }
+
+    unsafe { gl::UseProgram(0) };
+    window_context.swap_buffers().unwrap();
 }

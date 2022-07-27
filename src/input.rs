@@ -12,8 +12,9 @@ use winit::{
     event_loop::ControlFlow,
     window::Window,
 };
+
 pub fn handle_events<T>(
-    event: Event<'_, T>,
+    event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
     world_state: &mut AppState,
     timer: &mut Timer,
