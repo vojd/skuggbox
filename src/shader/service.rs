@@ -19,6 +19,7 @@ pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError
     Ok(ShaderProgram::new(vertex_shader, frag_shader))
 }
 
+/// TODO: Should only be the data structure and not actually construct the glsl shader
 pub struct ShaderProgram {
     pub id: gl::types::GLuint,
 }
@@ -97,19 +98,19 @@ pub struct ShaderLocations {
 }
 
 pub struct ShaderService {
-    pre_processor: Box<PreProcessor>,
+    pre_processors: Vec<PreProcessor>,
     fs: PathBuf,
     pub program: Option<ShaderProgram>,
+    pub programs: Vec<ShaderProgram>,
     pub files: Vec<PathBuf>,
     pub use_camera_integration: bool,
-    uniforms: Vec<Uniform>, // TODO: Unused
     pub locations: ShaderLocations,
 
     receiver: Option<Receiver<PathBuf>>,
 }
 
 impl ShaderService {
-    pub fn new(fs: PathBuf) -> Self {
+    pub fn new(fs: PathBuf, shader_files: Vec<PathBuf>) -> Self {
         let mut pre_processor = PreProcessor::new(fs.clone());
         pre_processor.reload();
         // NOTE: unwrapping here until we have UI
@@ -120,15 +121,45 @@ impl ShaderService {
         } else {
             vec![fs.clone()]
         };
+        // TODO:  Keep this one around until we're done refactoring. Merge with others later
         let locations = get_uniform_locations(&program);
 
+        // new
+        let shaders: Vec<ShaderProgram> = vec![];
+        // Contains all used shader files
+        let mut all_shader_files: Vec<PathBuf> = vec![];
+        let mut shader_programs: Vec<ShaderProgram> = vec![];
+        let mut pre_processors: Vec<PreProcessor> = vec![];
+
+        for f in shader_files.iter() {
+            let mut pre_processor = PreProcessor::new(f.clone());
+            pre_processors.push(pre_processor);
+
+            all_shader_files.push(f.clone());
+
+            let mut pre_processor = PreProcessor::new(f.to_owned());
+            pre_processor.reload();
+            let shader_program = create_program(pre_processor.shader_src.clone()).unwrap();
+
+            if let Some(f) = find_included_files(f.clone()) {
+                all_shader_files.extend(f);
+            };
+            // TODO: Add these to the real object later on
+            let locations = get_uniform_locations(&shader_program);
+
+            shader_programs.push(shader_program);
+        }
+
+        dbg!(&all_shader_files);
+
+        // end new
         Self {
-            pre_processor: pre_processor.into(),
+            pre_processors,
             fs,
             program: Some(program),
-            files,
+            programs: shader_programs,
+            files: all_shader_files,
             use_camera_integration: false,
-            uniforms: vec![],
             locations,
             receiver: None,
         }
@@ -154,19 +185,23 @@ impl ShaderService {
     }
 
     pub fn reload(&mut self) {
-        self.pre_processor.use_camera_integration = self.use_camera_integration;
-
-        self.pre_processor.reload();
-        match create_program(self.pre_processor.shader_src.clone()) {
-            Ok(new_program) => {
-                self.locations = get_uniform_locations(&new_program);
-                self.program = Some(new_program);
-                self.uniforms = read_uniforms(self.fs.clone());
-                info!("Shader recreated without errors")
-            }
-            _ => {
-                error!("Compilation failed - not binding failed program");
-            }
-        };
+        let use_cam = self.use_camera_integration;
+        // reload all pre-processors
+        self.programs = vec![];
+        for processor in self.pre_processors.iter_mut() {
+            processor.use_camera_integration = use_cam;
+            processor.reload();
+            match create_program(processor.shader_src.clone()) {
+                Ok(new_program) => {
+                    self.locations = get_uniform_locations(&new_program);
+                    self.programs.push(new_program);
+                    // self.uniforms = read_uniforms(self.fs.clone());
+                    info!("Shader recreated without errors")
+                }
+                _ => {
+                    error!("Compilation failed - not binding failed program");
+                }
+            };
+        }
     }
 }

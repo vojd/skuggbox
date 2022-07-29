@@ -7,6 +7,9 @@ pub struct Config {
     #[clap(short, long, name = "FILE", parse(from_os_str))]
     pub file: Option<PathBuf>,
 
+    #[clap(short, long, name = "SHADER_FILES", parse(from_os_str))]
+    pub shader_files: Option<Vec<PathBuf>>,
+
     #[clap(short, long)]
     pub always_on_top: bool,
 

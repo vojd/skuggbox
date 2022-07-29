@@ -51,7 +51,8 @@ impl App {
         // shader compiler channel
         // let (sender, receiver) = channel();
         let shader_file = config.file.unwrap();
-        let mut shader_service = ShaderService::new(shader_file);
+        let shader_files = config.shader_files.unwrap();
+        let mut shader_service = ShaderService::new(shader_file, shader_files);
 
         shader_service.watch();
         let vertex_buffer = Buffer::new_vertex_buffer();
@@ -90,7 +91,7 @@ impl App {
 fn render(
     window_context: &ContextWrapper<PossiblyCurrent, Window>,
     state: &mut AppState,
-    shaders: &ShaderService,
+    shader_service: &ShaderService,
     buffer: &Buffer,
 ) {
     unsafe {
@@ -98,34 +99,29 @@ fn render(
         gl::ClearColor(0.3, 0.3, 0.5, 1.0);
     }
 
-    if let Some(program) = &shaders.program {
-        unsafe { gl::UseProgram(program.id) };
-    } else {
-        unsafe { gl::UseProgram(0) };
-    }
-
     unsafe {
-        let program = shaders.program.as_ref().unwrap();
+        // TODO: This only pulls the first one at the moment until we have multi-buffer support
+        let program = shader_service.programs.get(0).unwrap();
 
         gl::UseProgram(program.id);
 
         // viewport resolution in pixels
         // let location = get_uniform_location(program, "iResolution");
         gl::Uniform2f(
-            shaders.locations.resolution,
+            shader_service.locations.resolution,
             state.width as f32,
             state.height as f32,
         );
 
         // let location = get_uniform_location(program, "iTime");
-        gl::Uniform1f(shaders.locations.time, state.playback_time);
+        gl::Uniform1f(shader_service.locations.time, state.playback_time);
         // let location = get_uniform_location(program, "iTimeDelta");
-        gl::Uniform1f(shaders.locations.time_delta, state.delta_time);
+        gl::Uniform1f(shader_service.locations.time_delta, state.delta_time);
 
         // push mouse location to the shader
         // let location = get_uniform_location(program, "iMouse");
         gl::Uniform4f(
-            shaders.locations.mouse,
+            shader_service.locations.mouse,
             state.mouse.pos.x,
             state.mouse.pos.y,
             if state.mouse.is_lmb_down { 1.0 } else { 0.0 },
