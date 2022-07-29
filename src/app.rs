@@ -36,8 +36,6 @@ impl App {
     }
 
     pub fn run(&mut self, config: Config) -> anyhow::Result<(), anyhow::Error> {
-        assert!(config.file.is_some());
-
         let App {
             event_loop,
             window_context,
@@ -47,7 +45,7 @@ impl App {
         let mut timer = Timer::new();
 
         gl::load_with(|s| window_context.get_proc_address(s) as *const _);
-        let shader_files = config.shader_files.unwrap();
+        let shader_files = config.files.unwrap();
         let mut shader_service = ShaderService::new(shader_files);
 
         shader_service.watch();

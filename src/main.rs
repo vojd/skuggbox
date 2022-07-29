@@ -37,7 +37,7 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
         }
     }
 
-    if config.file.is_some() {
+    if config.files.is_some() {
         log::info!("loading existing shader");
         app.run(config)?;
     }
