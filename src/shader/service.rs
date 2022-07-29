@@ -5,13 +5,13 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
 use crate::shader::VERTEX_SHADER;
-use crate::shader::{find_included_files, PreProcessor, Shader, ShaderError};
+use crate::shader::{find_included_files, PreProcessor, ShaderError};
 use crate::ShaderProgram;
 
 /// Construct an OpenGL compatible shader program
 pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError> {
-    let vertex_shader = Shader::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
-    let frag_shader = Shader::from_source(fragment_src, gl::FRAGMENT_SHADER)?;
+    let vertex_shader = ShaderProgram::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
+    let frag_shader = ShaderProgram::from_source(fragment_src, gl::FRAGMENT_SHADER)?;
     log::info!(
         "Creating shader program: {} {}",
         vertex_shader.id,
