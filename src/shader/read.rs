@@ -67,6 +67,7 @@ pub struct Part {
     pub parent_src: String,
 }
 
+#[derive(Clone)]
 pub struct PreProcessor {
     main_shader_path: PathBuf,
     main_shader_src: String,

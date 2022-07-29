@@ -9,6 +9,12 @@ use crate::shader::{find_included_files, PreProcessor, Shader, ShaderError};
 use crate::uniforms::{read_uniforms, Uniform};
 use crate::utils::cstr_with_len;
 
+pub struct SkuggboxShader {
+    pre_processor: PreProcessor,
+    shader_program: ShaderProgram,
+    files: Vec<PathBuf>,
+}
+
 pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError> {
     let vertex_shader = Shader::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
     let frag_shader = Shader::from_source(fragment_src, gl::FRAGMENT_SHADER)?;
@@ -20,11 +26,13 @@ pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError
 }
 
 /// TODO: Should only be the data structure and not actually construct the glsl shader
+#[derive(Clone)]
 pub struct ShaderProgram {
     pub id: gl::types::GLuint,
 }
 
 impl ShaderProgram {
+
     pub fn new(vert_shader: Shader, frag_shader: Shader) -> Self {
         let id = unsafe { gl::CreateProgram() };
         unsafe {
@@ -133,22 +141,26 @@ impl ShaderService {
 
         for f in shader_files.iter() {
             let mut pre_processor = PreProcessor::new(f.clone());
-            pre_processors.push(pre_processor);
+            pre_processor.reload();
+            pre_processors.push(pre_processor.clone());
+
+            let shader_program = create_program(pre_processor.clone().shader_src).unwrap();
 
             all_shader_files.push(f.clone());
-
-            let mut pre_processor = PreProcessor::new(f.to_owned());
-            pre_processor.reload();
-            let shader_program = create_program(pre_processor.shader_src.clone()).unwrap();
-
             if let Some(f) = find_included_files(f.clone()) {
                 all_shader_files.extend(f);
             };
             // TODO: Add these to the real object later on
-            let locations = get_uniform_locations(&shader_program);
+            // let locations = get_uniform_locations(&shader_program);
 
             shader_programs.push(shader_program);
-        }
+
+            // let skuggbox_shader = SkuggboxShader {
+            //     pre_processor,
+            //     shader_program,
+            //     files: all_shader_files.clone(),
+            // };
+        };
 
         dbg!(&all_shader_files);
 
@@ -196,7 +208,7 @@ impl ShaderService {
                     self.locations = get_uniform_locations(&new_program);
                     self.programs.push(new_program);
                     // self.uniforms = read_uniforms(self.fs.clone());
-                    info!("Shader recreated without errors")
+                    info!("Shader recreated without errors");
                 }
                 _ => {
                     error!("Compilation failed - not binding failed program");
