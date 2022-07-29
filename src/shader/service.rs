@@ -1,4 +1,4 @@
-use log::{error, info};
+use log;
 use std::ffi::CString;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -6,81 +6,26 @@ use std::thread;
 
 use crate::shader::VERTEX_SHADER;
 use crate::shader::{find_included_files, PreProcessor, Shader, ShaderError};
-use crate::uniforms::{read_uniforms, Uniform};
-use crate::utils::cstr_with_len;
+use crate::ShaderProgram;
 
-pub struct SkuggboxShader {
-    pre_processor: PreProcessor,
-    shader_program: ShaderProgram,
-    files: Vec<PathBuf>,
-}
-
+/// Construct an OpenGL compatible shader program
 pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError> {
     let vertex_shader = Shader::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
     let frag_shader = Shader::from_source(fragment_src, gl::FRAGMENT_SHADER)?;
-    info!(
+    log::info!(
         "Creating shader program: {} {}",
-        vertex_shader.id, frag_shader.id
+        vertex_shader.id,
+        frag_shader.id
     );
     Ok(ShaderProgram::new(vertex_shader, frag_shader))
 }
 
-/// TODO: Should only be the data structure and not actually construct the glsl shader
-#[derive(Clone)]
-pub struct ShaderProgram {
-    pub id: gl::types::GLuint,
-}
-
-impl ShaderProgram {
-
-    pub fn new(vert_shader: Shader, frag_shader: Shader) -> Self {
-        let id = unsafe { gl::CreateProgram() };
-        unsafe {
-            gl::AttachShader(id, vert_shader.id);
-            gl::AttachShader(id, frag_shader.id);
-            gl::LinkProgram(id);
-        }
-
-        let mut success: gl::types::GLint = 1;
-        unsafe {
-            gl::GetProgramiv(id, gl::LINK_STATUS, &mut success);
-        }
-
-        if success == 0 {
-            let mut len: gl::types::GLint = 0;
-            unsafe {
-                gl::GetProgramiv(id, gl::INFO_LOG_LENGTH, &mut len);
-            }
-
-            let error = cstr_with_len(len as usize);
-
-            unsafe {
-                gl::GetProgramInfoLog(
-                    id,
-                    len,
-                    std::ptr::null_mut(),
-                    error.as_ptr() as *mut gl::types::GLchar,
-                );
-            }
-            error!("linker error {}", error.to_string_lossy());
-            panic!("linker error");
-        }
-
-        unsafe {
-            gl::DetachShader(id, vert_shader.id);
-            gl::DetachShader(id, frag_shader.id);
-        }
-
-        Self { id }
-    }
-}
-
-impl Drop for ShaderProgram {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteProgram(self.id);
-        }
-    }
+/// Simple struct to hold all that's necessary to build and read the contents of a shader
+pub struct SkuggboxShader {
+    pub pre_processor: PreProcessor,
+    pub shader_program: ShaderProgram,
+    pub locations: ShaderLocations,
+    pub files: Vec<PathBuf>,
 }
 
 #[allow(temporary_cstring_as_ptr)]
@@ -105,74 +50,71 @@ pub struct ShaderLocations {
     pub mouse: i32,
 }
 
-pub struct ShaderService {
-    pre_processors: Vec<PreProcessor>,
-    fs: PathBuf,
-    pub program: Option<ShaderProgram>,
-    pub programs: Vec<ShaderProgram>,
-    pub files: Vec<PathBuf>,
-    pub use_camera_integration: bool,
-    pub locations: ShaderLocations,
+/// Given a Vec of paths, create the OpenGL shaders to be used
+fn create_shaders(shader_files: Vec<PathBuf>, use_cam_integration: bool) -> Vec<SkuggboxShader> {
+    let skuggbox_shaders: Vec<SkuggboxShader> = shader_files
+        .iter()
+        .map(|path| {
+            let mut all_shader_files = vec![];
+            let mut pre_processor = PreProcessor::new(path.clone());
+            pre_processor.use_camera_integration = use_cam_integration;
+            pre_processor.reload();
 
+            let shader_program = create_program(pre_processor.clone().shader_src).unwrap();
+
+            all_shader_files.push(path.clone());
+            if let Some(path) = find_included_files(path.clone()) {
+                all_shader_files.extend(path);
+            };
+
+            let locations = get_uniform_locations(&shader_program);
+
+            SkuggboxShader {
+                pre_processor,
+                shader_program,
+                locations,
+                files: all_shader_files,
+            }
+        })
+        .collect();
+    skuggbox_shaders
+}
+
+/// The ShaderService handles the inputted shader files, constructs an OpenGL compatible shader
+/// as well as builds up a pre-processor for inlining include files etc.
+/// It also holds all file data around the used shaders to be used for reloading.
+pub struct ShaderService {
+    /// All the shader constructs we're using in this setup.
+    /// Contains the pre-processor and everything else to build and reload a shader
+    pub skuggbox_shaders: Vec<SkuggboxShader>,
+    /// initial set of files used to construct these shaders
+    initial_shader_files: Vec<PathBuf>,
+    /// all files that makes up these shaders, with included files
+    pub all_shader_files: Vec<PathBuf>,
+    pub use_camera_integration: bool,
+    /// Two way channels for listening and reacting to changes in our shader files
     receiver: Option<Receiver<PathBuf>>,
 }
 
 impl ShaderService {
-    pub fn new(fs: PathBuf, shader_files: Vec<PathBuf>) -> Self {
-        let mut pre_processor = PreProcessor::new(fs.clone());
-        pre_processor.reload();
-        // NOTE: unwrapping here until we have UI
-        // Need to be able to recreate the shader service when user fixes the error
-        let program = create_program(pre_processor.shader_src.clone()).unwrap();
-        let files = if let Some(f) = find_included_files(fs.clone()) {
-            vec![fs.clone(), f.iter().collect()]
-        } else {
-            vec![fs.clone()]
-        };
-        // TODO:  Keep this one around until we're done refactoring. Merge with others later
-        let locations = get_uniform_locations(&program);
-
-        // new
-        let shaders: Vec<ShaderProgram> = vec![];
-        // Contains all used shader files
+    pub fn new(shader_files: Vec<PathBuf>) -> Self {
+        // Construct a vector of all used shader files
         let mut all_shader_files: Vec<PathBuf> = vec![];
-        let mut shader_programs: Vec<ShaderProgram> = vec![];
-        let mut pre_processors: Vec<PreProcessor> = vec![];
-
         for f in shader_files.iter() {
-            let mut pre_processor = PreProcessor::new(f.clone());
-            pre_processor.reload();
-            pre_processors.push(pre_processor.clone());
-
-            let shader_program = create_program(pre_processor.clone().shader_src).unwrap();
-
             all_shader_files.push(f.clone());
             if let Some(f) = find_included_files(f.clone()) {
                 all_shader_files.extend(f);
             };
-            // TODO: Add these to the real object later on
-            // let locations = get_uniform_locations(&shader_program);
+        }
 
-            shader_programs.push(shader_program);
+        // The actual shader objects we want to use in this demo/intro
+        let skuggbox_shaders = create_shaders(shader_files.clone(), false);
 
-            // let skuggbox_shader = SkuggboxShader {
-            //     pre_processor,
-            //     shader_program,
-            //     files: all_shader_files.clone(),
-            // };
-        };
-
-        dbg!(&all_shader_files);
-
-        // end new
         Self {
-            pre_processors,
-            fs,
-            program: Some(program),
-            programs: shader_programs,
-            files: all_shader_files,
+            skuggbox_shaders,
+            initial_shader_files: shader_files,
+            all_shader_files,
             use_camera_integration: false,
-            locations,
             receiver: None,
         }
     }
@@ -181,13 +123,15 @@ impl ShaderService {
         let (sender, receiver): (Sender<PathBuf>, Receiver<PathBuf>) = channel();
 
         self.receiver = Some(receiver);
-        let files = self.files.clone();
+        let files = self.all_shader_files.clone();
 
         let _ = thread::spawn(move || {
             glsl_watcher::watch_all(sender, files);
         });
     }
 
+    /// Running is basically the same as listening and reacting to changes.
+    /// We reload the shaders whenever we spot a file change.
     pub fn run(&mut self) {
         if let Some(recv) = &self.receiver {
             if recv.try_recv().is_ok() {
@@ -196,24 +140,9 @@ impl ShaderService {
         };
     }
 
+    /// Reloading re-constructs the shaders.
     pub fn reload(&mut self) {
         let use_cam = self.use_camera_integration;
-        // reload all pre-processors
-        self.programs = vec![];
-        for processor in self.pre_processors.iter_mut() {
-            processor.use_camera_integration = use_cam;
-            processor.reload();
-            match create_program(processor.shader_src.clone()) {
-                Ok(new_program) => {
-                    self.locations = get_uniform_locations(&new_program);
-                    self.programs.push(new_program);
-                    // self.uniforms = read_uniforms(self.fs.clone());
-                    info!("Shader recreated without errors");
-                }
-                _ => {
-                    error!("Compilation failed - not binding failed program");
-                }
-            };
-        }
+        self.skuggbox_shaders = create_shaders(self.initial_shader_files.clone(), use_cam);
     }
 }
