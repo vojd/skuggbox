@@ -8,6 +8,21 @@ use crate::shader::VERTEX_SHADER;
 use crate::shader::{find_included_files, PreProcessor, ShaderError};
 use crate::ShaderProgram;
 
+/// Simple struct to hold all that's necessary to build and read the contents of a shader
+pub struct SkuggboxShader {
+    pub pre_processor: PreProcessor,
+    pub shader_program: ShaderProgram,
+    pub locations: ShaderLocations,
+    pub files: Vec<PathBuf>,
+}
+
+pub struct ShaderLocations {
+    pub resolution: i32,
+    pub time: i32,
+    pub time_delta: i32,
+    pub mouse: i32,
+}
+
 /// Construct an OpenGL compatible shader program
 pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError> {
     let vertex_shader = ShaderProgram::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
@@ -18,14 +33,6 @@ pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError
         frag_shader.id
     );
     Ok(ShaderProgram::new(vertex_shader, frag_shader))
-}
-
-/// Simple struct to hold all that's necessary to build and read the contents of a shader
-pub struct SkuggboxShader {
-    pub pre_processor: PreProcessor,
-    pub shader_program: ShaderProgram,
-    pub locations: ShaderLocations,
-    pub files: Vec<PathBuf>,
 }
 
 #[allow(temporary_cstring_as_ptr)]
@@ -40,14 +47,6 @@ fn get_uniform_locations(program: &ShaderProgram) -> ShaderLocations {
         time_delta: get_uniform_location(program, "iTimeDelta"),
         mouse: get_uniform_location(program, "iMouse"),
     }
-}
-
-#[derive(Default)]
-pub struct ShaderLocations {
-    pub resolution: i32,
-    pub time: i32,
-    pub time_delta: i32,
-    pub mouse: i32,
 }
 
 /// Given a Vec of paths, create the OpenGL shaders to be used
@@ -143,6 +142,6 @@ impl ShaderService {
     /// Reloading re-constructs the shaders.
     pub fn reload(&mut self) {
         let use_cam = self.use_camera_integration;
-        self.skuggbox_shaders = create_shaders(self.initial_shader_files.clone(), use_cam);
+        self.skuggbox_shaders = create_shaders(self.initial_shader_files.to_owned(), use_cam);
     }
 }
