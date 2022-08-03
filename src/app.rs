@@ -99,8 +99,6 @@ fn render(
     }
 
     // TODO: This only pulls the first one at the moment until we have multi-buffer support
-    // TODO: Also don't even render if we have Shader errors. For the future when we have UI we should only render the UI if we have errors.
-
     let shader = skuggbox_shaders.get(0).unwrap();
     let program = &shader.shader_program;
 
