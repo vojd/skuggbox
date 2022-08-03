@@ -4,7 +4,8 @@ use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::{Window, WindowBuilder};
 
 use crate::{
-    get_uniform_location, handle_events, AppState, Buffer, Config, PlayMode, ShaderService, Timer,
+    get_uniform_location, handle_events, AppState, Buffer, Config, PlayMode, ShaderService,
+    SkuggboxShader, Timer,
 };
 
 pub struct App {
@@ -46,7 +47,9 @@ impl App {
 
         gl::load_with(|s| window_context.get_proc_address(s) as *const _);
         let shader_files = config.files.unwrap();
-        let mut shader_service = ShaderService::new(shader_files);
+
+        let mut shader_service =
+            ShaderService::new(shader_files).expect("Could not compile initial shaders");
 
         shader_service.watch();
         let vertex_buffer = Buffer::new_vertex_buffer();
@@ -73,7 +76,9 @@ impl App {
                 });
             }
 
-            render(window_context, state, &shader_service, &vertex_buffer);
+            if let Some(skuggbox_shaders) = &shader_service.skuggbox_shaders {
+                render(window_context, state, skuggbox_shaders, &vertex_buffer);
+            }
 
             timer.stop();
         }
@@ -85,7 +90,7 @@ impl App {
 fn render(
     window_context: &ContextWrapper<PossiblyCurrent, Window>,
     state: &mut AppState,
-    shader_service: &ShaderService,
+    skuggbox_shaders: &[SkuggboxShader],
     buffer: &Buffer,
 ) {
     unsafe {
@@ -93,30 +98,26 @@ fn render(
         gl::ClearColor(0.3, 0.3, 0.5, 1.0);
     }
 
-    unsafe {
-        // TODO: This only pulls the first one at the moment until we have multi-buffer support
-        // let program = shader_service.skuggbox_shaders.get(0).unwrap();
-        let shader = shader_service.skuggbox_shaders.get(0).unwrap();
-        // let program = &shader_service.skuggbox_shaders.get(0).unwrap().shader_program;
-        let program = &shader.shader_program;
+    // TODO: This only pulls the first one at the moment until we have multi-buffer support
+    // TODO: Also don't even render if we have Shader errors. For the future when we have UI we should only render the UI if we have errors.
 
+    let shader = skuggbox_shaders.get(0).unwrap();
+    let program = &shader.shader_program;
+
+    unsafe {
         gl::UseProgram(program.id);
 
         // viewport resolution in pixels
-        // let location = get_uniform_location(program, "iResolution");
         gl::Uniform2f(
             shader.locations.resolution,
             state.width as f32,
             state.height as f32,
         );
 
-        // let location = get_uniform_location(program, "iTime");
         gl::Uniform1f(shader.locations.time, state.playback_time);
-        // let location = get_uniform_location(program, "iTimeDelta");
         gl::Uniform1f(shader.locations.time_delta, state.delta_time);
 
         // push mouse location to the shader
-        // let location = get_uniform_location(program, "iMouse");
         gl::Uniform4f(
             shader.locations.mouse,
             state.mouse.pos.x,

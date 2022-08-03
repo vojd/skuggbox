@@ -50,8 +50,11 @@ fn get_uniform_locations(program: &ShaderProgram) -> ShaderLocations {
 }
 
 /// Given a Vec of paths, create the OpenGL shaders to be used
-fn create_shaders(shader_files: Vec<PathBuf>, use_cam_integration: bool) -> Vec<SkuggboxShader> {
-    let skuggbox_shaders: Vec<SkuggboxShader> = shader_files
+fn create_shaders(
+    shader_files: Vec<PathBuf>,
+    use_cam_integration: bool,
+) -> anyhow::Result<Vec<SkuggboxShader>, ShaderError> {
+    shader_files
         .iter()
         .map(|path| {
             let mut all_shader_files = vec![];
@@ -59,7 +62,7 @@ fn create_shaders(shader_files: Vec<PathBuf>, use_cam_integration: bool) -> Vec<
             pre_processor.use_camera_integration = use_cam_integration;
             pre_processor.reload();
 
-            let shader_program = create_program(pre_processor.clone().shader_src).unwrap();
+            let shader_program = create_program(pre_processor.clone().shader_src)?;
 
             all_shader_files.push(path.clone());
             if let Some(path) = find_included_files(path.clone()) {
@@ -68,15 +71,14 @@ fn create_shaders(shader_files: Vec<PathBuf>, use_cam_integration: bool) -> Vec<
 
             let locations = get_uniform_locations(&shader_program);
 
-            SkuggboxShader {
+            Ok(SkuggboxShader {
                 pre_processor,
                 shader_program,
                 locations,
                 files: all_shader_files,
-            }
+            })
         })
-        .collect();
-    skuggbox_shaders
+        .collect()
 }
 
 /// The ShaderService handles the inputted shader files, constructs an OpenGL compatible shader
@@ -85,7 +87,7 @@ fn create_shaders(shader_files: Vec<PathBuf>, use_cam_integration: bool) -> Vec<
 pub struct ShaderService {
     /// All the shader constructs we're using in this setup.
     /// Contains the pre-processor and everything else to build and reload a shader
-    pub skuggbox_shaders: Vec<SkuggboxShader>,
+    pub skuggbox_shaders: Option<Vec<SkuggboxShader>>,
     /// initial set of files used to construct these shaders
     initial_shader_files: Vec<PathBuf>,
     /// all files that makes up these shaders, with included files
@@ -96,7 +98,7 @@ pub struct ShaderService {
 }
 
 impl ShaderService {
-    pub fn new(shader_files: Vec<PathBuf>) -> Self {
+    pub fn new(shader_files: Vec<PathBuf>) -> anyhow::Result<Self, ShaderError> {
         // Construct a vector of all used shader files
         let mut all_shader_files: Vec<PathBuf> = vec![];
         for f in shader_files.iter() {
@@ -107,15 +109,20 @@ impl ShaderService {
         }
 
         // The actual shader objects we want to use in this demo/intro
-        let skuggbox_shaders = create_shaders(shader_files.clone(), false);
+        let skuggbox_shaders =
+            if let Ok(skuggbox_shaders) = create_shaders(shader_files.clone(), false) {
+                skuggbox_shaders.into()
+            } else {
+                None
+            };
 
-        Self {
+        Ok(Self {
             skuggbox_shaders,
             initial_shader_files: shader_files,
             all_shader_files,
             use_camera_integration: false,
             receiver: None,
-        }
+        })
     }
 
     pub fn watch(&mut self) {
@@ -134,14 +141,24 @@ impl ShaderService {
     pub fn run(&mut self) {
         if let Some(recv) = &self.receiver {
             if recv.try_recv().is_ok() {
-                self.reload()
+                match self.reload() {
+                    Ok(_) => log::info!("Shader reloaded"),
+                    Err(err) => {
+                        log::error!("{:?}", &err);
+                    }
+                }
             }
         };
     }
 
     /// Reloading re-constructs the shaders.
-    pub fn reload(&mut self) {
+    pub fn reload(&mut self) -> anyhow::Result<(), ShaderError> {
         let use_cam = self.use_camera_integration;
-        self.skuggbox_shaders = create_shaders(self.initial_shader_files.to_owned(), use_cam);
+        if let Ok(skuggbox_shaders) = create_shaders(self.initial_shader_files.to_owned(), use_cam)
+        {
+            self.skuggbox_shaders = skuggbox_shaders.into()
+        };
+
+        Ok(())
     }
 }

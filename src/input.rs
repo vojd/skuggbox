@@ -88,14 +88,14 @@ pub fn handle_events<T>(
                                     if shader.use_camera_integration {
                                         info!("Disabling camera integration");
                                         shader.use_camera_integration = false;
-                                        shader.reload();
+                                        shader.reload().expect("Expected successful shader reload");
                                     }
                                 }
                                 VirtualKeyCode::Key2 => {
                                     if !shader.use_camera_integration {
                                         info!("Enabling camera integration. Please use '#pragma skuggbox(camera)' in your shader");
                                         shader.use_camera_integration = true;
-                                        shader.reload();
+                                        shader.reload().expect("Expected successful shader reload");
                                     }
                                 }
                                 VirtualKeyCode::Period => {

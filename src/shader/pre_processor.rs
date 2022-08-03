@@ -233,8 +233,6 @@ impl PreProcessor {
                         shader_name,
                     )
                 }
-
-                // log::debug!("{:?}", path);
             })
             .collect()
     }
