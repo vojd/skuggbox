@@ -1,37 +1,26 @@
-use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
 use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::window::{Window, WindowBuilder};
 
 use crate::{
-    get_uniform_location, handle_events, AppState, Buffer, Config, PlayMode, ShaderService,
-    SkuggboxShader, Timer,
+    get_uniform_location, handle_events, AppState, AppWindow, Buffer, Config, PlayMode,
+    ShaderService, SkuggboxShader, Timer,
 };
 
 pub struct App {
     pub event_loop: EventLoop<()>,
-    pub window_context: ContextWrapper<PossiblyCurrent, Window>,
+    // pub window_context: ContextWrapper<PossiblyCurrent, Window>,
+    pub app_window: AppWindow,
     pub state: AppState,
 }
 
 impl App {
     pub fn from_config(config: Config) -> Self {
-        let event_loop = EventLoop::new();
-        let window = WindowBuilder::new()
-            .with_title("Skuggbox")
-            .with_always_on_top(config.always_on_top);
-
-        let window_context = ContextBuilder::new()
-            .build_windowed(window, &event_loop)
-            .unwrap();
-
-        let window_context = unsafe { window_context.make_current().unwrap() };
-
+        let (app_window, event_loop) = AppWindow::new(config);
         let state = crate::AppState::default();
 
         Self {
             event_loop,
-            window_context,
+            app_window,
             state,
         }
     }
@@ -39,13 +28,12 @@ impl App {
     pub fn run(&mut self, config: Config) -> anyhow::Result<(), anyhow::Error> {
         let App {
             event_loop,
-            window_context,
+            app_window,
             state,
         } = self;
 
         let mut timer = Timer::new();
 
-        gl::load_with(|s| window_context.get_proc_address(s) as *const _);
         let shader_files = config.files.unwrap();
 
         let mut shader_service =
@@ -69,7 +57,7 @@ impl App {
                         control_flow,
                         state,
                         &mut timer,
-                        window_context,
+                        &app_window.window_context,
                         &vertex_buffer,
                         &mut shader_service,
                     );
@@ -77,7 +65,7 @@ impl App {
             }
 
             if let Some(skuggbox_shaders) = &shader_service.skuggbox_shaders {
-                render(window_context, state, skuggbox_shaders, &vertex_buffer);
+                render(app_window, state, skuggbox_shaders, &vertex_buffer);
             }
 
             timer.stop();
@@ -88,7 +76,8 @@ impl App {
 }
 
 fn render(
-    window_context: &ContextWrapper<PossiblyCurrent, Window>,
+    app_window: &mut AppWindow,
+    // window_context: &ContextWrapper<PossiblyCurrent, Window>,
     state: &mut AppState,
     skuggbox_shaders: &[SkuggboxShader],
     buffer: &Buffer,
@@ -142,5 +131,6 @@ fn render(
     }
 
     unsafe { gl::UseProgram(0) };
-    window_context.swap_buffers().unwrap();
+    // window_context.swap_buffers().unwrap();
+    app_window.window_context.swap_buffers().unwrap();
 }

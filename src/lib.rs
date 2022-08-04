@@ -14,6 +14,7 @@ pub mod state;
 pub mod timer;
 pub mod uniforms;
 pub mod utils;
+pub mod window;
 
 pub use app::*;
 pub use buffer::*;
@@ -29,3 +30,4 @@ pub use state::*;
 pub use timer::*;
 pub use uniforms::*;
 pub use utils::*;
+pub use window::*;
