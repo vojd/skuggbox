@@ -12,8 +12,9 @@ use winit::{
     event_loop::ControlFlow,
     window::Window,
 };
+
 pub fn handle_events<T>(
-    event: Event<'_, T>,
+    event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
     world_state: &mut AppState,
     timer: &mut Timer,
@@ -87,14 +88,14 @@ pub fn handle_events<T>(
                                     if shader.use_camera_integration {
                                         info!("Disabling camera integration");
                                         shader.use_camera_integration = false;
-                                        shader.reload();
+                                        shader.reload().expect("Expected successful shader reload");
                                     }
                                 }
                                 VirtualKeyCode::Key2 => {
                                     if !shader.use_camera_integration {
                                         info!("Enabling camera integration. Please use '#pragma skuggbox(camera)' in your shader");
                                         shader.use_camera_integration = true;
-                                        shader.reload();
+                                        shader.reload().expect("Expected successful shader reload");
                                     }
                                 }
                                 VirtualKeyCode::Period => {
@@ -111,8 +112,8 @@ pub fn handle_events<T>(
                 _ => {}
             }
 
-            world_state.mouse.handle_window_events(&event);
-            world_state.camera.handle_window_events(&event);
+            world_state.mouse.handle_window_events(event);
+            world_state.camera.handle_window_events(event);
             world_state
                 .camera
                 .handle_mouse(&world_state.mouse, world_state.delta_time);

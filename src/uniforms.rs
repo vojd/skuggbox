@@ -35,8 +35,7 @@ impl FromStr for GLSLType {
 }
 
 /// hmm... might be overkill
-#[derive(Debug, PartialEq)]
-#[allow(dead_code)]
+#[derive(Debug)]
 pub enum GLSLValue {
     Int(i32),
     Float(f32),
@@ -156,7 +155,6 @@ mod tests {
         let line = "uniform ; //;;".to_string();
         let uniform = extract_uniform(line);
         assert!(uniform.is_err());
-        // assert_eq!(uniform, Err(UniformError::ParseError));
     }
 
     #[test]

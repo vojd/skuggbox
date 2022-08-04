@@ -3,9 +3,8 @@ use std::path::PathBuf;
 #[derive(clap::Parser, Debug, Clone)]
 #[clap(name = "skuggbox", about = "Skuggbox GLSL shader viewer")]
 pub struct Config {
-    /// GLSL shader file to load
-    #[clap(short, long, name = "FILE", parse(from_os_str))]
-    pub file: Option<PathBuf>,
+    #[clap(short, long, name = "SHADER_FILES", parse(from_os_str))]
+    pub files: Option<Vec<PathBuf>>,
 
     #[clap(short, long)]
     pub always_on_top: bool,
