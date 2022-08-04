@@ -1,3 +1,4 @@
+use crate::VERTEX_SHADER;
 use std::ffi::CString;
 
 pub fn cstr_with_len(len: usize) -> CString {
@@ -16,19 +17,26 @@ pub enum ShaderError {
     FileError { error: String },
 }
 
-/// TODO: Should only be the data structure and not actually construct the glsl shader
-/// TODO: Merge with struct Shader. No reason to keep two of them around
 #[derive(Clone)]
 pub struct ShaderProgram {
     pub id: gl::types::GLuint,
 }
 
 impl ShaderProgram {
-    pub fn new(vert_shader: ShaderProgram, frag_shader: ShaderProgram) -> Self {
+    /// Constructs a fragment shader from string.
+    /// Adds on a simple vertex shader.
+    pub fn from_frag_src(fragment_src: String) -> anyhow::Result<Self, ShaderError> {
+        let vert_shader_id = shader_from_string(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
+        let frag_shader_id = shader_from_string(fragment_src, gl::FRAGMENT_SHADER)?;
+        log::info!(
+            "Creating shader program: {} {}",
+            vert_shader_id,
+            frag_shader_id
+        );
         let id = unsafe { gl::CreateProgram() };
         unsafe {
-            gl::AttachShader(id, vert_shader.id);
-            gl::AttachShader(id, frag_shader.id);
+            gl::AttachShader(id, vert_shader_id);
+            gl::AttachShader(id, frag_shader_id);
             gl::LinkProgram(id);
         }
 
@@ -58,11 +66,11 @@ impl ShaderProgram {
         }
 
         unsafe {
-            gl::DetachShader(id, vert_shader.id);
-            gl::DetachShader(id, frag_shader.id);
+            gl::DetachShader(id, vert_shader_id);
+            gl::DetachShader(id, frag_shader_id);
         }
 
-        Self { id }
+        Ok(Self { id })
     }
 
     pub fn from_source(

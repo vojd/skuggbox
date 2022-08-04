@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
-use crate::shader::VERTEX_SHADER;
 use crate::shader::{find_included_files, PreProcessor, ShaderError};
 use crate::ShaderProgram;
 
@@ -23,18 +22,6 @@ pub struct ShaderLocations {
     pub mouse: i32,
 }
 
-/// Construct an OpenGL compatible shader program
-pub fn create_program(fragment_src: String) -> Result<ShaderProgram, ShaderError> {
-    let vertex_shader = ShaderProgram::from_source(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
-    let frag_shader = ShaderProgram::from_source(fragment_src, gl::FRAGMENT_SHADER)?;
-    log::info!(
-        "Creating shader program: {} {}",
-        vertex_shader.id,
-        frag_shader.id
-    );
-    Ok(ShaderProgram::new(vertex_shader, frag_shader))
-}
-
 #[allow(temporary_cstring_as_ptr)]
 pub fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
     unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
@@ -49,7 +36,7 @@ fn get_uniform_locations(program: &ShaderProgram) -> ShaderLocations {
     }
 }
 
-/// Given a Vec of paths, create the OpenGL shaders to be used
+/// Given a Vec of paths, create the OpenGL shaders to be used by the ShaderService
 fn create_shaders(
     shader_files: Vec<PathBuf>,
     use_cam_integration: bool,
@@ -62,7 +49,7 @@ fn create_shaders(
             pre_processor.use_camera_integration = use_cam_integration;
             pre_processor.reload();
 
-            let shader_program = create_program(pre_processor.clone().shader_src)?;
+            let shader_program = ShaderProgram::from_frag_src(pre_processor.clone().shader_src)?;
 
             all_shader_files.push(path.clone());
             if let Some(path) = find_included_files(path.clone()) {

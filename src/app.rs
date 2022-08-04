@@ -50,8 +50,8 @@ impl App {
 
         let mut shader_service =
             ShaderService::new(shader_files).expect("Could not compile initial shaders");
-
         shader_service.watch();
+
         let vertex_buffer = Buffer::new_vertex_buffer();
 
         while state.is_running {
