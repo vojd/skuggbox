@@ -2,13 +2,12 @@ use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::{
-    get_uniform_location, handle_events, AppState, AppWindow, Buffer, Config, PlayMode,
-    ShaderService, SkuggboxShader, Timer,
+    handle_events, AppState, AppWindow, Buffer, Config, PlayMode, ShaderService, SkuggboxShader,
+    Timer,
 };
 
 pub struct App {
     pub event_loop: EventLoop<()>,
-    // pub window_context: ContextWrapper<PossiblyCurrent, Window>,
     pub app_window: AppWindow,
     pub state: AppState,
 }
@@ -117,10 +116,10 @@ fn render(
         let transform = state.camera.calculate_uniform_data();
         let position = transform.w_axis;
 
-        let location = get_uniform_location(program, "sbCameraPosition");
+        let location = program.uniform_location("sbCameraPosition");
         gl::Uniform3f(location, position.x, position.y, position.z);
 
-        let location = get_uniform_location(program, "sbCameraTransform");
+        let location = program.uniform_location("sbCameraTransform");
         gl::UniformMatrix4fv(location, 1, gl::FALSE, &transform.to_cols_array()[0]);
 
         gl::Clear(gl::COLOR_BUFFER_BIT);
@@ -131,6 +130,5 @@ fn render(
     }
 
     unsafe { gl::UseProgram(0) };
-    // window_context.swap_buffers().unwrap();
     app_window.window_context.swap_buffers().unwrap();
 }

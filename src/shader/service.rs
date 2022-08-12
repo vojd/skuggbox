@@ -5,9 +5,14 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
 use crate::shader::{find_included_files, PreProcessor, ShaderError};
-use crate::ShaderProgram;
+use crate::{PreProcessorConfig, ShaderLocations, ShaderProgram};
 
-/// Simple struct to hold all that's necessary to build and read the contents of a shader
+#[allow(temporary_cstring_as_ptr)]
+pub fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
+    unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
+}
+
+/// The SkuggboxShader encapsulates everything we need to load,process and render a shader program
 pub struct SkuggboxShader {
     pub pre_processor: PreProcessor,
     pub shader_program: ShaderProgram,
@@ -15,57 +20,41 @@ pub struct SkuggboxShader {
     pub files: Vec<PathBuf>,
 }
 
-pub struct ShaderLocations {
-    pub resolution: i32,
-    pub time: i32,
-    pub time_delta: i32,
-    pub mouse: i32,
-}
+impl SkuggboxShader {
+    pub fn from_files(
+        shader_files: Vec<PathBuf>,
+        use_camera_integration: bool,
+    ) -> anyhow::Result<Vec<SkuggboxShader>, ShaderError> {
+        let pre_processor_config = PreProcessorConfig {
+            use_camera_integration,
+        };
+        shader_files
+            .iter()
+            .map(|path| {
+                let mut all_shader_files = vec![];
+                let mut pre_processor =
+                    PreProcessor::new(path.clone(), pre_processor_config.to_owned());
+                pre_processor.reload();
 
-#[allow(temporary_cstring_as_ptr)]
-pub fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
-    unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
-}
+                let shader_program =
+                    ShaderProgram::from_frag_src(pre_processor.clone().shader_src)?;
 
-fn get_uniform_locations(program: &ShaderProgram) -> ShaderLocations {
-    ShaderLocations {
-        resolution: get_uniform_location(program, "iResolution"),
-        time: get_uniform_location(program, "iTime"),
-        time_delta: get_uniform_location(program, "iTimeDelta"),
-        mouse: get_uniform_location(program, "iMouse"),
-    }
-}
+                all_shader_files.push(path.clone());
+                if let Some(path) = find_included_files(path.clone()) {
+                    all_shader_files.extend(path);
+                };
 
-/// Given a Vec of paths, create the OpenGL shaders to be used by the ShaderService
-fn create_shaders(
-    shader_files: Vec<PathBuf>,
-    use_cam_integration: bool,
-) -> anyhow::Result<Vec<SkuggboxShader>, ShaderError> {
-    shader_files
-        .iter()
-        .map(|path| {
-            let mut all_shader_files = vec![];
-            let mut pre_processor = PreProcessor::new(path.clone());
-            pre_processor.use_camera_integration = use_cam_integration;
-            pre_processor.reload();
+                let locations = shader_program.uniform_locations();
 
-            let shader_program = ShaderProgram::from_frag_src(pre_processor.clone().shader_src)?;
-
-            all_shader_files.push(path.clone());
-            if let Some(path) = find_included_files(path.clone()) {
-                all_shader_files.extend(path);
-            };
-
-            let locations = get_uniform_locations(&shader_program);
-
-            Ok(SkuggboxShader {
-                pre_processor,
-                shader_program,
-                locations,
-                files: all_shader_files,
+                Ok(SkuggboxShader {
+                    pre_processor,
+                    shader_program,
+                    locations,
+                    files: all_shader_files,
+                })
             })
-        })
-        .collect()
+            .collect()
+    }
 }
 
 /// The ShaderService handles the inputted shader files, constructs an OpenGL compatible shader
@@ -97,7 +86,7 @@ impl ShaderService {
 
         // The actual shader objects we want to use in this demo/intro
         let skuggbox_shaders =
-            if let Ok(skuggbox_shaders) = create_shaders(shader_files.clone(), false) {
+            if let Ok(skuggbox_shaders) = SkuggboxShader::from_files(shader_files.clone(), false) {
                 skuggbox_shaders.into()
             } else {
                 None
@@ -141,7 +130,8 @@ impl ShaderService {
     /// Reloading re-constructs the shaders.
     pub fn reload(&mut self) -> anyhow::Result<(), ShaderError> {
         let use_cam = self.use_camera_integration;
-        if let Ok(skuggbox_shaders) = create_shaders(self.initial_shader_files.to_owned(), use_cam)
+        if let Ok(skuggbox_shaders) =
+            SkuggboxShader::from_files(self.initial_shader_files.to_owned(), use_cam)
         {
             self.skuggbox_shaders = skuggbox_shaders.into()
         };

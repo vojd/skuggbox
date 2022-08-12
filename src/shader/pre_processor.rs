@@ -1,8 +1,9 @@
 use log::{debug, error};
 use regex::Regex;
+use std::collections::{BTreeMap, HashMap};
 /// Utility functions to read shader content
 /// and produce the necessary pieces to construct a
-use std::collections::{BTreeMap, HashMap};
+use std::default::Default;
 use std::env::current_dir;
 use std::fs::File;
 use std::io::Read;
@@ -68,13 +69,17 @@ pub struct Part {
 }
 
 #[derive(Clone)]
+pub struct PreProcessorConfig {
+    pub use_camera_integration: bool,
+}
+
+#[derive(Clone)]
 pub struct PreProcessor {
     main_shader_path: PathBuf,
     main_shader_src: String,
     parts: BTreeMap<String, Part>,
 
-    // if the camera integration should be used or not
-    pub use_camera_integration: bool,
+    pub config: PreProcessorConfig,
 
     // contains the final shader
     pub shader_src: String,
@@ -84,13 +89,13 @@ pub struct PreProcessor {
 }
 
 impl PreProcessor {
-    pub fn new(shader_path: PathBuf) -> Self {
+    pub fn new(shader_path: PathBuf, config: PreProcessorConfig) -> Self {
         let shader_src = read_shader_src(shader_path.clone()).unwrap();
         Self {
             main_shader_src: shader_src,
             main_shader_path: shader_path,
             parts: Default::default(),
-            use_camera_integration: false,
+            config,
             shader_src: Default::default(),
             files: vec![],
         }
@@ -117,7 +122,7 @@ impl PreProcessor {
         if line.contains("#pragma") && camera_regex.is_match(line) {
             debug!("Found camera integration: {:?}", line);
 
-            let pragma_content = match self.use_camera_integration {
+            let pragma_content = match self.config.use_camera_integration {
                 true => "#define USE_SKUGGBOX_CAMERA\n".to_string() + SKUGGBOX_CAMERA,
                 _ => SKUGGBOX_CAMERA.to_string(),
             };
