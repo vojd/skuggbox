@@ -1,16 +1,10 @@
 use log;
-use std::ffi::CString;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
 use crate::shader::{find_included_files, PreProcessor, ShaderError};
 use crate::{PreProcessorConfig, ShaderLocations, ShaderProgram};
-
-#[allow(temporary_cstring_as_ptr)]
-pub fn get_uniform_location(program: &ShaderProgram, uniform_name: &str) -> i32 {
-    unsafe { gl::GetUniformLocation(program.id, CString::new(uniform_name).unwrap().as_ptr()) }
-}
 
 /// The SkuggboxShader encapsulates everything we need to load,process and render a shader program
 pub struct SkuggboxShader {
