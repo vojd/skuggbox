@@ -18,6 +18,14 @@ pub enum ShaderError {
 }
 
 #[derive(Clone)]
+pub struct ShaderLocations {
+    pub resolution: i32,
+    pub time: i32,
+    pub time_delta: i32,
+    pub mouse: i32,
+}
+
+#[derive(Clone)]
 pub struct ShaderProgram {
     pub id: gl::types::GLuint,
 }
@@ -79,6 +87,21 @@ impl ShaderProgram {
     ) -> anyhow::Result<Self, ShaderError> {
         let id = shader_from_string(source, shader_type)?;
         Ok(ShaderProgram { id })
+    }
+
+    #[allow(temporary_cstring_as_ptr)]
+    pub fn uniform_location(&self, uniform_name: &str) -> i32 {
+        unsafe { gl::GetUniformLocation(self.id, CString::new(uniform_name).unwrap().as_ptr()) }
+    }
+
+    /// Extract some common uniform locations
+    pub fn uniform_locations(&self) -> ShaderLocations {
+        ShaderLocations {
+            resolution: self.uniform_location("iResolution"),
+            time: self.uniform_location("iTime"),
+            time_delta: self.uniform_location("iTimeDelta"),
+            mouse: self.uniform_location("iMouse"),
+        }
     }
 }
 
