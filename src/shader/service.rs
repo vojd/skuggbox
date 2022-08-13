@@ -8,13 +8,12 @@ use crate::{PreProcessorConfig, ShaderLocations, ShaderProgram};
 
 /// The SkuggboxShader encapsulates everything we need to load,process and render a shader program
 pub struct SkuggboxShader {
-    pub pre_processor: PreProcessor,
     pub shader_program: ShaderProgram,
     pub locations: ShaderLocations,
-    pub files: Vec<PathBuf>,
 }
 
 impl SkuggboxShader {
+    // TODO(mathias): Pass in the PreProcessorConfig
     pub fn from_files(
         shader_files: Vec<PathBuf>,
         use_camera_integration: bool,
@@ -28,7 +27,7 @@ impl SkuggboxShader {
                 let mut all_shader_files = vec![];
                 let mut pre_processor =
                     PreProcessor::new(path.clone(), pre_processor_config.to_owned());
-                pre_processor.reload();
+                pre_processor.pre_process();
 
                 let shader_program =
                     ShaderProgram::from_frag_src(pre_processor.clone().shader_src)?;
@@ -41,10 +40,8 @@ impl SkuggboxShader {
                 let locations = shader_program.uniform_locations();
 
                 Ok(SkuggboxShader {
-                    pre_processor,
                     shader_program,
                     locations,
-                    files: all_shader_files,
                 })
             })
             .collect()
@@ -58,9 +55,11 @@ pub struct ShaderService {
     /// All the shader constructs we're using in this setup.
     /// Contains the pre-processor and everything else to build and reload a shader
     pub skuggbox_shaders: Option<Vec<SkuggboxShader>>,
-    /// initial set of files used to construct these shaders
+    /// initial set of files used to construct these shaders.
+    /// What we initially construct the shaders from
     initial_shader_files: Vec<PathBuf>,
-    /// all files that makes up these shaders, with included files
+    /// All files that makes up the shaders, with its included files.
+    /// This property is what we'll watch for file changes to trigger a reload.
     pub all_shader_files: Vec<PathBuf>,
     pub use_camera_integration: bool,
     /// Two way channels for listening and reacting to changes in our shader files

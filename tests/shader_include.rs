@@ -8,7 +8,7 @@ fn test_shader_reload() {
         use_camera_integration: false,
     };
     let mut pre_processor = PreProcessor::new(shader_path, config);
-    pre_processor.reload();
+    pre_processor.pre_process();
     dbg!(&pre_processor.shader_src);
     assert_eq!(pre_processor.shader_src.contains("#pragma include"), false);
 }
@@ -20,7 +20,7 @@ fn test_camera_integration() {
         use_camera_integration: false,
     };
     let mut pre_processor = PreProcessor::new(shader_path, config);
-    pre_processor.reload();
+    pre_processor.pre_process();
     dbg!(&pre_processor.shader_src);
 
     let lines = pre_processor.shader_src.lines().count();

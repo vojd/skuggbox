@@ -101,7 +101,7 @@ impl PreProcessor {
         }
     }
 
-    pub fn reload(&mut self) {
+    pub fn pre_process(&mut self) {
         match read_shader_src(self.main_shader_path.clone()) {
             Ok(src) => self.process(src),
             Err(e) => error!("Could not re-compile shader {:?}", e),

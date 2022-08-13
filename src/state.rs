@@ -1,4 +1,4 @@
-use crate::{CameraModel, Mouse, OrbitCamera};
+use crate::{CameraModel, Mouse, OrbitCamera, Timer};
 use serde::{Deserialize, Serialize};
 
 pub struct AppState {
@@ -6,6 +6,7 @@ pub struct AppState {
     pub height: i32,
     /// App state - is the application running?
     pub is_running: bool,
+    pub timer: Timer,
     pub delta_time: f32,
     pub playback_time: f32,
     pub mouse: Mouse,
@@ -20,6 +21,7 @@ impl Default for AppState {
             width: 1024,
             height: 768,
             is_running: true,
+            timer: Timer::default(),
             delta_time: 0.0,
             playback_time: 0.0,
             mouse: Mouse::default(),

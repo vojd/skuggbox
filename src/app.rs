@@ -2,14 +2,14 @@ use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::{
-    handle_events, AppState, AppWindow, Buffer, Config, PlayMode, ShaderService, SkuggboxShader,
-    Timer,
+    handle_actions, handle_events, Action, AppState, AppWindow, Buffer, Config, PlayMode,
+    ShaderService, SkuggboxShader,
 };
 
 pub struct App {
     pub event_loop: EventLoop<()>,
     pub app_window: AppWindow,
-    pub state: AppState,
+    pub app_state: AppState,
 }
 
 impl App {
@@ -20,7 +20,7 @@ impl App {
         Self {
             event_loop,
             app_window,
-            state,
+            app_state: state,
         }
     }
 
@@ -28,10 +28,8 @@ impl App {
         let App {
             event_loop,
             app_window,
-            state,
+            app_state,
         } = self;
-
-        let mut timer = Timer::new();
 
         let shader_files = config.files.unwrap();
 
@@ -40,13 +38,15 @@ impl App {
         shader_service.watch();
 
         let vertex_buffer = Buffer::new_vertex_buffer();
+        let mut actions: Vec<Action> = vec![];
 
-        while state.is_running {
+        while app_state.is_running {
             shader_service.run();
 
-            if matches!(state.play_mode, PlayMode::Playing) {
-                timer.start();
-                state.delta_time = timer.delta_time;
+            if matches!(app_state.play_mode, PlayMode::Playing) {
+                app_state.timer.start();
+                // TODO(mathias): Remove this. Only use `app_state.timer.delta_time`
+                app_state.delta_time = app_state.timer.delta_time;
             }
 
             {
@@ -54,21 +54,25 @@ impl App {
                     handle_events(
                         &event,
                         control_flow,
-                        state,
-                        &mut timer,
+                        app_state,
                         &app_window.window_context,
-                        &vertex_buffer,
-                        &mut shader_service,
+                        &mut actions,
                     );
+
+                    handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
                 });
             }
 
             if let Some(skuggbox_shaders) = &shader_service.skuggbox_shaders {
-                render(app_window, state, skuggbox_shaders, &vertex_buffer);
+                render(app_window, app_state, skuggbox_shaders, &vertex_buffer);
             }
 
-            timer.stop();
+            app_state.timer.stop();
         }
+
+        // Cleanup
+
+        vertex_buffer.delete();
 
         Ok(())
     }
@@ -101,7 +105,7 @@ fn render(
         );
 
         gl::Uniform1f(shader.locations.time, state.playback_time);
-        gl::Uniform1f(shader.locations.time_delta, state.delta_time);
+        gl::Uniform1f(shader.locations.time_delta, state.timer.delta_time);
 
         // push mouse location to the shader
         gl::Uniform4f(
