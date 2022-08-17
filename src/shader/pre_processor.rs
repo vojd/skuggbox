@@ -14,7 +14,7 @@ use crate::utils::{include_statement_from_string, pragma_shader_name};
 use crate::SKUGGBOX_CAMERA;
 
 /// Read a shader from disk, return String or ShaderError
-pub fn read_shader_src(shader_path: PathBuf) -> anyhow::Result<String, ShaderError> {
+fn read_file(shader_path: PathBuf) -> anyhow::Result<String, ShaderError> {
     let mut file = File::open(shader_path.clone()).map_err(|e| ShaderError::FileError {
         error: format!(
             "Err: {:?}, {:?} is invalid or does not exit",
@@ -34,7 +34,7 @@ fn is_include_line(s: &str) -> bool {
 /// Search for included files from the supplied `shader`
 /// TODO: Replace with the new includer
 pub fn find_included_files(shader: PathBuf) -> Option<Vec<PathBuf>> {
-    let s = match read_shader_src(shader.clone()) {
+    let s = match read_file(shader.clone()) {
         Ok(src) => src,
         _ => return None,
     };
@@ -90,7 +90,7 @@ pub struct PreProcessor {
 
 impl PreProcessor {
     pub fn new(shader_path: PathBuf, config: PreProcessorConfig) -> Self {
-        let shader_src = read_shader_src(shader_path.clone()).unwrap();
+        let shader_src = read_file(shader_path.clone()).unwrap();
         Self {
             main_shader_src: shader_src,
             main_shader_path: shader_path,
@@ -102,7 +102,7 @@ impl PreProcessor {
     }
 
     pub fn pre_process(&mut self) {
-        match read_shader_src(self.main_shader_path.clone()) {
+        match read_file(self.main_shader_path.clone()) {
             Ok(src) => self.process(src),
             Err(e) => error!("Could not re-compile shader {:?}", e),
         };
@@ -193,7 +193,7 @@ impl PreProcessor {
         self.included_files(shader_path.clone(), shader_src.clone())
             .iter()
             .for_each(|(inc_path, inc_name)| {
-                let inc_src = read_shader_src(inc_path.to_owned()).unwrap();
+                let inc_src = read_file(inc_path.to_owned()).unwrap();
 
                 let part = Part {
                     shader_path: inc_path.to_owned(),

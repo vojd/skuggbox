@@ -70,10 +70,10 @@ impl ShaderService {
     pub fn new(shader_files: Vec<PathBuf>) -> anyhow::Result<Self, ShaderError> {
         // Construct a vector of all used shader files
         let mut all_shader_files: Vec<PathBuf> = vec![];
-        for f in shader_files.iter() {
-            all_shader_files.push(f.clone());
-            if let Some(f) = find_included_files(f.clone()) {
-                all_shader_files.extend(f);
+        for file_path in shader_files.iter() {
+            all_shader_files.push(file_path.clone());
+            if let Some(file_path) = find_included_files(file_path.clone()) {
+                all_shader_files.extend(file_path);
             };
         }
 

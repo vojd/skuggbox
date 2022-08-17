@@ -15,12 +15,12 @@ pub struct App {
 impl App {
     pub fn from_config(config: Config) -> Self {
         let (app_window, event_loop) = AppWindow::new(config);
-        let state = crate::AppState::default();
+        let app_state = AppState::default();
 
         Self {
             event_loop,
             app_window,
-            app_state: state,
+            app_state,
         }
     }
 
