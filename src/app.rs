@@ -33,8 +33,7 @@ impl App {
 
         let shader_files = config.files.unwrap();
 
-        let mut shader_service =
-            ShaderService::new(shader_files).expect("Could not compile initial shaders");
+        let mut shader_service = ShaderService::new(shader_files);
         shader_service.watch();
 
         let vertex_buffer = Buffer::new_vertex_buffer();
@@ -63,9 +62,7 @@ impl App {
                 });
             }
 
-            if let Some(skuggbox_shaders) = &shader_service.skuggbox_shaders {
-                render(app_window, app_state, skuggbox_shaders, &vertex_buffer);
-            }
+            render(app_window, app_state, &shader_service.shaders, &vertex_buffer);
 
             app_state.timer.stop();
         }

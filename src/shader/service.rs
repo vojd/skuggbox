@@ -1,50 +1,63 @@
-use log;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
-use crate::shader::{find_included_files, PreProcessor, ShaderError};
-use crate::{PreProcessorConfig, ShaderLocations, ShaderProgram};
+use crate::shader::{PreProcessor};
+use crate::{PreProcessorConfig, Shader, ShaderLocations, ShaderProgram};
 
 /// The SkuggboxShader encapsulates everything we need to load,process and render a shader program
 pub struct SkuggboxShader {
+    shader: Shader,
     pub shader_program: ShaderProgram,
     pub locations: ShaderLocations,
+    pub ready_to_compile: bool
 }
 
 impl SkuggboxShader {
-    // TODO(mathias): Pass in the PreProcessorConfig
     pub fn from_files(
+        pre_processor: &PreProcessor,
         shader_files: Vec<PathBuf>,
-        use_camera_integration: bool,
-    ) -> anyhow::Result<Vec<SkuggboxShader>, ShaderError> {
-        let pre_processor_config = PreProcessorConfig {
-            use_camera_integration,
-        };
+    ) -> Vec<SkuggboxShader> {
         shader_files
             .iter()
             .map(|path| {
-                let mut all_shader_files = vec![];
-                let mut pre_processor =
-                    PreProcessor::new(path.clone(), pre_processor_config.to_owned());
-                pre_processor.pre_process();
-
-                let shader_program =
-                    ShaderProgram::from_frag_src(pre_processor.clone().shader_src)?;
-
-                all_shader_files.push(path.clone());
-                if let Some(path) = find_included_files(path.clone()) {
-                    all_shader_files.extend(path);
-                };
-
-                let locations = shader_program.uniform_locations();
-
-                Ok(SkuggboxShader {
-                    shader_program,
-                    locations,
-                })
+                let shader = pre_processor.load_file(path);
+                let ready = shader.ready_to_compile.clone();
+                SkuggboxShader {
+                    shader,
+                    shader_program: ShaderProgram::new(),
+                    locations: ShaderLocations::new(),
+                    ready_to_compile: ready
+                }
             })
             .collect()
+    }
+
+    pub fn get_all_files(&self) -> Vec<&PathBuf> {
+        self.shader.parts.keys().collect()
+    }
+
+    pub fn uses_file(&self, path: &PathBuf) -> bool {
+        self.shader.parts.keys().any(|p| p.eq(path))
+    }
+
+    pub fn get_main_shader_path(&self) -> &PathBuf {
+        &self.shader.main_shader_path
+    }
+
+    pub fn replace_shader(&mut self, shader: Shader) {
+        self.ready_to_compile = shader.ready_to_compile;
+        self.shader = shader;
+    }
+
+    pub fn try_to_compile(&mut self) -> bool  {
+        if !self.ready_to_compile {
+            return false;
+        }
+
+        self.shader_program.free();
+
+        return true;
     }
 }
 
@@ -54,54 +67,43 @@ impl SkuggboxShader {
 pub struct ShaderService {
     /// All the shader constructs we're using in this setup.
     /// Contains the pre-processor and everything else to build and reload a shader
-    pub skuggbox_shaders: Option<Vec<SkuggboxShader>>,
-    /// initial set of files used to construct these shaders.
-    /// What we initially construct the shaders from
-    initial_shader_files: Vec<PathBuf>,
-    /// All files that makes up the shaders, with its included files.
-    /// This property is what we'll watch for file changes to trigger a reload.
-    pub all_shader_files: Vec<PathBuf>,
+    pub shaders: Vec<SkuggboxShader>,
     pub use_camera_integration: bool,
     /// Two way channels for listening and reacting to changes in our shader files
+    pre_processor: PreProcessor,
     receiver: Option<Receiver<PathBuf>>,
 }
 
 impl ShaderService {
-    pub fn new(shader_files: Vec<PathBuf>) -> anyhow::Result<Self, ShaderError> {
-        // Construct a vector of all used shader files
-        let mut all_shader_files: Vec<PathBuf> = vec![];
-        for file_path in shader_files.iter() {
-            all_shader_files.push(file_path.clone());
-            if let Some(file_path) = find_included_files(file_path.clone()) {
-                all_shader_files.extend(file_path);
-            };
-        }
+    pub fn new(shader_files: Vec<PathBuf>) -> Self {
+        let pre_processor_config = PreProcessorConfig {
+          use_camera_integration: false
+        };
 
-        // The actual shader objects we want to use in this demo/intro
-        let skuggbox_shaders =
-            if let Ok(skuggbox_shaders) = SkuggboxShader::from_files(shader_files.clone(), false) {
-                skuggbox_shaders.into()
-            } else {
-                None
-            };
+        let pre_processor = PreProcessor::new(pre_processor_config);
+        let shaders = SkuggboxShader::from_files(&pre_processor, shader_files.clone());
 
-        Ok(Self {
-            skuggbox_shaders,
-            initial_shader_files: shader_files,
-            all_shader_files,
+        Self {
+            pre_processor,
+            shaders,
             use_camera_integration: false,
             receiver: None,
-        })
+        }
     }
 
     pub fn watch(&mut self) {
         let (sender, receiver): (Sender<PathBuf>, Receiver<PathBuf>) = channel();
 
         self.receiver = Some(receiver);
-        let files = self.all_shader_files.clone();
+
+        let all_shader_files = self.shaders
+            .iter()
+            .flat_map(|shader| shader.get_all_files().clone())
+            .map(|path| path.to_owned().clone())
+            .collect();
 
         let _ = thread::spawn(move || {
-            glsl_watcher::watch_all(sender, files);
+            glsl_watcher::watch_all(sender, all_shader_files);
         });
     }
 
@@ -109,26 +111,33 @@ impl ShaderService {
     /// We reload the shaders whenever we spot a file change.
     pub fn run(&mut self) {
         if let Some(recv) = &self.receiver {
-            if recv.try_recv().is_ok() {
-                match self.reload() {
-                    Ok(_) => log::info!("Shader reloaded"),
-                    Err(err) => {
-                        log::error!("{:?}", &err);
+            let value = recv.try_recv();
+            if value.is_ok() {
+                let changed_file_path = value.ok().unwrap();
+
+                for mut shader in self.shaders.iter() {
+                    if !shader.uses_file(&changed_file_path) {
+                        continue;
                     }
+                    self.reload_shader(shader);
                 }
             }
         };
+
+        for mut shader in self.shaders.iter() {
+            if shader.try_to_compile() {
+                // TODO: shader was compiled
+            }
+        }
+    }
+
+    fn reload_shader(&self, shader: &mut SkuggboxShader) {
+        let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
+        shader.replace_shader(reloaded_shader);
     }
 
     /// Reloading re-constructs the shaders.
-    pub fn reload(&mut self) -> anyhow::Result<(), ShaderError> {
-        let use_cam = self.use_camera_integration;
-        if let Ok(skuggbox_shaders) =
-            SkuggboxShader::from_files(self.initial_shader_files.to_owned(), use_cam)
-        {
-            self.skuggbox_shaders = skuggbox_shaders.into()
-        };
-
-        Ok(())
+    pub fn reload(&mut self) {
+       // TODO: reload everything
     }
 }

@@ -30,7 +30,39 @@ pub struct ShaderProgram {
     pub id: gl::types::GLuint,
 }
 
+impl ShaderLocations {
+    pub fn new() -> ShaderLocations {
+        ShaderLocations {
+            resolution: -1,
+            time: -1,
+            time_delta: -1,
+            mouse: -1
+        }
+    }
+}
+
 impl ShaderProgram {
+    pub fn new() -> ShaderProgram {
+        ShaderProgram { id: u32::MAX}
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.id < u32::MAX
+    }
+
+    pub fn free(&mut self) -> bool {
+        if !self.is_valid() {
+            return false;
+        }
+
+        unsafe {
+            gl::DeleteProgram(self.id);
+        }
+
+        self.id = u32::MAX;
+        return true;
+    }
+
     /// Constructs a fragment shader from string.
     /// Adds on a simple vertex shader.
     pub fn from_frag_src(fragment_src: String) -> anyhow::Result<Self, ShaderError> {
