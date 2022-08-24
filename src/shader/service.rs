@@ -115,7 +115,7 @@ impl ShaderService {
             if value.is_ok() {
                 let changed_file_path = value.ok().unwrap();
 
-                for mut shader in self.shaders.iter() {
+                for shader in self.shaders.iter_mut() {
                     if !shader.uses_file(&changed_file_path) {
                         continue;
                     }
@@ -124,7 +124,7 @@ impl ShaderService {
             }
         };
 
-        for mut shader in self.shaders.iter() {
+        for shader in self.shaders.iter_mut() {
             if shader.try_to_compile() {
                 // TODO: shader was compiled
             }
