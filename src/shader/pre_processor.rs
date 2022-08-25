@@ -84,16 +84,19 @@ impl PreProcessor {
 
         let mut loaded_files: HashSet<PathBuf> = HashSet::new();
 
-        let main_part_result = self.process_part(&mut shader, &mut loaded_files, shader_path.clone());
-        if main_part_result.is_ok() {
-            let main_part = main_part_result.ok().unwrap();
-            let path = match shader_path.canonicalize() {
-                Ok(x) => x,
-                Err(_) => shader_path.to_owned()
-            };
-            shader.parts.insert(path.clone(), main_part.clone());
-            shader.shader_src = main_part.shader_src.clone();
-            shader.ready_to_compile = true;
+        match self.process_part(&mut shader, &mut loaded_files, shader_path.clone()) {
+            Ok(main_part) => {
+                let path = match shader_path.canonicalize() {
+                    Ok(x) => x,
+                    Err(_) => shader_path.to_owned()
+                };
+                shader.parts.insert(path.clone(), main_part.clone());
+                shader.shader_src = main_part.shader_src.clone();
+                shader.ready_to_compile = true;
+            },
+            Err(e) => {
+                log::error!("Error reading shader {:?}: {:?}", shader_path, e);
+            }
         }
 
         return shader;
@@ -128,7 +131,8 @@ impl PreProcessor {
                 }
 
                 let shader_name = pragma_shader_name(line);
-                let path = shader_path.join(shader_name);
+                let base_dir = shader_path.parent().unwrap();
+                let path = base_dir.join(shader_name);
 
                 if loaded_files.contains(&path) {
                     log::warn!("multiple includes of shader: {:?}", path);

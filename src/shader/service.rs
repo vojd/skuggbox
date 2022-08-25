@@ -56,8 +56,21 @@ impl SkuggboxShader {
         }
 
         self.shader_program.free();
+        self.ready_to_compile = false;
 
-        return true;
+        return match ShaderProgram::from_frag_src(self.shader.shader_src.clone()) {
+            Ok(program) => {
+                self.shader_program = program;
+              true
+            },
+            Err(_) => {
+                false
+            }
+        };
+    }
+
+    pub fn extract_uniforms(&mut self) {
+        self.locations = self.shader_program.uniform_locations();
     }
 }
 
@@ -116,22 +129,23 @@ impl ShaderService {
                 let changed_file_path = value.ok().unwrap();
 
                 for shader in self.shaders.iter_mut() {
-                    if !shader.uses_file(&changed_file_path) {
-                        continue;
+                    if shader.uses_file(&changed_file_path) {
+                        let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
+                        shader.replace_shader(reloaded_shader);
                     }
-                    self.reload_shader(shader);
                 }
             }
         };
 
         for shader in self.shaders.iter_mut() {
             if shader.try_to_compile() {
-                // TODO: shader was compiled
+                // shader was compiled
+                shader.extract_uniforms();
             }
         }
     }
 
-    fn reload_shader(&self, shader: &mut SkuggboxShader) {
+    fn reload_shader(&mut self, shader: &mut SkuggboxShader) {
         let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
         shader.replace_shader(reloaded_shader);
     }
