@@ -31,9 +31,10 @@ impl App {
             app_state,
         } = self;
 
-        let shader_files = config.files.unwrap();
 
+        let shader_files = config.files.unwrap();
         let mut shader_service = ShaderService::new(shader_files);
+
         shader_service.watch();
 
         let vertex_buffer = Buffer::new_vertex_buffer();

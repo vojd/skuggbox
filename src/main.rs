@@ -11,7 +11,8 @@ use simple_logger::SimpleLogger;
 
 use skuggbox::{app::App, config::Config};
 
-fn create_new_shader(path: PathBuf) -> std::io::Result<u64> {
+/// Creates a new default shader at the gives path
+fn create_new_default_shader(path: PathBuf) -> std::io::Result<u64> {
     if path.exists() {
         log::warn!("File already exists. Not overwriting it to save your life :D");
         exit(1);
@@ -28,7 +29,7 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
 
     if let Some(new_file) = config.clone().new {
         log::info!("creating new shader at {:?}", new_file);
-        match create_new_shader(new_file) {
+        match create_new_default_shader(new_file) {
             Ok(_) => log::info!("Done"),
             Err(err) => {
                 log::error!("{:?}", err);

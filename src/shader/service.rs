@@ -3,76 +3,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
 use crate::shader::{PreProcessor};
-use crate::{PreProcessorConfig, Shader, ShaderLocations, ShaderProgram};
+use crate::{PreProcessorConfig, SkuggboxShader};
 
-/// The SkuggboxShader encapsulates everything we need to load,process and render a shader program
-pub struct SkuggboxShader {
-    shader: Shader,
-    pub shader_program: ShaderProgram,
-    pub locations: ShaderLocations,
-    pub ready_to_compile: bool
-}
-
-impl SkuggboxShader {
-    pub fn from_files(
-        pre_processor: &PreProcessor,
-        shader_files: Vec<PathBuf>,
-    ) -> Vec<SkuggboxShader> {
-        shader_files
-            .iter()
-            .map(|path| {
-                let shader = pre_processor.load_file(path);
-                let ready = shader.ready_to_compile.clone();
-                SkuggboxShader {
-                    shader,
-                    shader_program: ShaderProgram::new(),
-                    locations: ShaderLocations::new(),
-                    ready_to_compile: ready
-                }
-            })
-            .collect()
-    }
-
-    pub fn get_all_files(&self) -> Vec<&PathBuf> {
-        self.shader.parts.keys().collect()
-    }
-
-    pub fn uses_file(&self, path: &PathBuf) -> bool {
-        self.shader.parts.keys().any(|p| p.eq(path))
-    }
-
-    pub fn get_main_shader_path(&self) -> &PathBuf {
-        &self.shader.main_shader_path
-    }
-
-    pub fn replace_shader(&mut self, shader: Shader) {
-        self.ready_to_compile = shader.ready_to_compile;
-        self.shader = shader;
-    }
-
-    pub fn try_to_compile(&mut self) -> bool  {
-        if !self.ready_to_compile {
-            return false;
-        }
-
-        self.shader_program.free();
-        self.ready_to_compile = false;
-
-        return match ShaderProgram::from_frag_src(self.shader.shader_src.clone()) {
-            Ok(program) => {
-                self.shader_program = program;
-              true
-            },
-            Err(_) => {
-                false
-            }
-        };
-    }
-
-    pub fn extract_uniforms(&mut self) {
-        self.locations = self.shader_program.uniform_locations();
-    }
-}
 
 /// The ShaderService handles the inputted shader files, constructs an OpenGL compatible shader
 /// as well as builds up a pre-processor for inlining include files etc.
@@ -120,9 +52,11 @@ impl ShaderService {
         });
     }
 
-    /// Running is basically the same as listening and reacting to changes.
-    /// We reload the shaders whenever we spot a file change.
+    /// This method should be called from the GL-thread.
+    /// It is basically the same as watching for file changes and the
+    /// reload the shaders whenever that happens.
     pub fn run(&mut self) {
+        // pull file updates from the channel
         if let Some(recv) = &self.receiver {
             let value = recv.try_recv();
             if value.is_ok() {
@@ -131,7 +65,9 @@ impl ShaderService {
                 for shader in self.shaders.iter_mut() {
                     if shader.uses_file(&changed_file_path) {
                         let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
-                        shader.replace_shader(reloaded_shader);
+                        shader.mark_for_recompilation(reloaded_shader);
+
+                        // TODO: If the included files change in the shader, they won't be watched
                     }
                 }
             }
@@ -139,19 +75,22 @@ impl ShaderService {
 
         for shader in self.shaders.iter_mut() {
             if shader.try_to_compile() {
-                // shader was compiled
-                shader.extract_uniforms();
+                // Hurray! The shader was compiled
+                shader.find_shader_uniforms();
             }
         }
     }
 
     fn reload_shader(&mut self, shader: &mut SkuggboxShader) {
         let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
-        shader.replace_shader(reloaded_shader);
+        shader.mark_for_recompilation(reloaded_shader);
     }
 
-    /// Reloading re-constructs the shaders.
+    /// Reloading re-constructs all shaders.
     pub fn reload(&mut self) {
-       // TODO: reload everything
+        for shader in self.shaders.iter_mut() {
+            let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
+            shader.mark_for_recompilation(reloaded_shader);
+        }
     }
 }
