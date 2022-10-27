@@ -42,23 +42,6 @@ pub struct PreProcessor {
     pub config: PreProcessorConfig,
 }
 
-fn is_include_line(s: &str) -> bool {
-    s.starts_with("#pragma") && s.contains("include")
-}
-
-fn read_file(shader_path: PathBuf) -> anyhow::Result<String, ShaderError> {
-    let mut file = File::open(shader_path.clone()).map_err(|e| ShaderError::FileError {
-        error: format!(
-            "Err: {:?}, {:?} is invalid or does not exit",
-            e, shader_path
-        ),
-    })?;
-
-    let mut s = String::new();
-    file.read_to_string(&mut s).unwrap();
-    Ok(s)
-}
-
 impl PreProcessor {
     pub fn new(config: PreProcessorConfig) -> Self {
         Self { config }
@@ -169,4 +152,21 @@ impl PreProcessor {
 
         blocks.join("\n")
     }
+}
+
+fn is_include_line(s: &str) -> bool {
+    s.starts_with("#pragma") && s.contains("include")
+}
+
+fn read_file(shader_path: PathBuf) -> anyhow::Result<String, ShaderError> {
+    let mut file = File::open(shader_path.clone()).map_err(|e| ShaderError::FileError {
+        error: format!(
+            "Err: {:?}, {:?} is invalid or does not exit",
+            e, shader_path
+        ),
+    })?;
+
+    let mut s = String::new();
+    file.read_to_string(&mut s).unwrap();
+    Ok(s)
 }
