@@ -88,7 +88,7 @@ impl WatcherService {
             // the service had already been started, just return because we're nice people
             return;
         }
-
+        self.started.store(true, Ordering::Relaxed);
 
         let files_watched = self.files_mutex.lock().unwrap().iter()
             .map(|path| path.clone())
