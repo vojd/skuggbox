@@ -1,12 +1,12 @@
-use std::borrow::{Borrow};
+use std::borrow::Borrow;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use notify::{Op, raw_watcher, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{raw_watcher, Op, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub struct WatcherService {
     on_change_sender: Arc<Mutex<Sender<PathBuf>>>,
@@ -56,7 +56,7 @@ impl WatcherService {
                 match self.watcher.unwatch(file) {
                     Ok(_) => {
                         println!("Unwatching file {:?}", file);
-                    },
+                    }
                     Err(_) => {
                         println!("Error: Can't unwatch file {:?}", file);
                     }
@@ -75,7 +75,7 @@ impl WatcherService {
             match self.watcher.watch(file, RecursiveMode::NonRecursive) {
                 Ok(_) => {
                     println!("Watching file {:?}", file);
-                },
+                }
                 Err(_) => {
                     println!("Error: Can't watch file {:?}", file);
                 }
@@ -90,9 +90,7 @@ impl WatcherService {
         }
         self.started.store(true, Ordering::Relaxed);
 
-        let files_watched = self.files_mutex.lock().unwrap().iter()
-            .map(|path| path.clone())
-            .collect();
+        let files_watched = self.files_mutex.lock().unwrap().iter().cloned().collect();
 
         self.watch_all(files_watched);
         self.threaded_watch_loop();
@@ -110,10 +108,10 @@ impl WatcherService {
                 // NOTE: It's likely that a change to a file will trigger two successive WRITE events
                 let changed_file = match locked_receiver.recv() {
                     Ok(RawEvent {
-                           path: Some(path),
-                           op: Ok(op),
-                           ..
-                       }) => {
+                        path: Some(path),
+                        op: Ok(op),
+                        ..
+                    }) => {
                         if op == Op::WRITE {
                             println!("change in: {:?}", path);
                             Some(path)
