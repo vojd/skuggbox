@@ -1,6 +1,9 @@
 #![warn(clippy::all)]
 #![warn(rust_2018_idioms)]
 
+pub mod watcher_service;
+pub use watcher_service::*;
+
 use std::fs;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};

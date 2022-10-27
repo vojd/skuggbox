@@ -81,11 +81,6 @@ impl ShaderService {
         }
     }
 
-    fn reload_shader(&mut self, shader: &mut SkuggboxShader) {
-        let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
-        shader.mark_for_recompilation(reloaded_shader);
-    }
-
     /// Reloading re-constructs all shaders.
     pub fn reload(&mut self) {
         for shader in self.shaders.iter_mut() {

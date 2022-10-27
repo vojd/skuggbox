@@ -65,6 +65,8 @@ impl App {
 
             render(app_window, app_state, &shader_service.shaders, &vertex_buffer);
 
+
+
             app_state.timer.stop();
         }
 
