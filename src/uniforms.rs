@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum GLSLType {
     // primitives
@@ -89,7 +89,6 @@ fn extract_uniform(line: String) -> Result<Uniform, UniformError> {
     }
 
     let parts: Vec<String> = line
-        .trim()
         .split_whitespace()
         .take(3)
         .map(|s| s.to_string())

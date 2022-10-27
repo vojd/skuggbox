@@ -1,12 +1,12 @@
-use std::path::PathBuf;
 use crate::{PreProcessor, Shader, ShaderLocations, ShaderProgram};
+use std::path::PathBuf;
 
 /// The SkuggboxShader encapsulates everything we need to load, process and render a shader program
 pub struct SkuggboxShader {
     shader: Shader,
     pub shader_program: ShaderProgram,
     pub locations: ShaderLocations,
-    pub ready_to_compile: bool
+    pub ready_to_compile: bool,
 }
 
 impl SkuggboxShader {
@@ -19,12 +19,12 @@ impl SkuggboxShader {
             .iter()
             .map(|path| {
                 let shader = pre_processor.load_file(path);
-                let ready = shader.ready_to_compile.clone();
+                let ready_to_compile = shader.ready_to_compile;
                 SkuggboxShader {
                     shader,
-                    shader_program: ShaderProgram::new(),
-                    locations: ShaderLocations::new(),
-                    ready_to_compile: ready
+                    shader_program: ShaderProgram::default(),
+                    locations: ShaderLocations::default(),
+                    ready_to_compile,
                 }
             })
             .collect()
@@ -52,7 +52,7 @@ impl SkuggboxShader {
     }
 
     /// Attempt to recompile the shader. Returns true if the shader was recompiled.
-    pub fn try_to_compile(&mut self) -> bool  {
+    pub fn try_to_compile(&mut self) -> bool {
         if !self.ready_to_compile {
             return false;
         }
@@ -60,15 +60,13 @@ impl SkuggboxShader {
         self.shader_program.free();
         self.ready_to_compile = false;
 
-        return match ShaderProgram::from_frag_src(self.shader.shader_src.clone()) {
+        match ShaderProgram::from_frag_src(self.shader.shader_src.clone()) {
             Ok(program) => {
                 self.shader_program = program;
                 true
-            },
-            Err(_) => {
-                false
             }
-        };
+            Err(_) => false,
+        }
     }
 
     /// Detected uniforms in the shader source

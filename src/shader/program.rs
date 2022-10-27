@@ -30,22 +30,18 @@ pub struct ShaderProgram {
     pub id: gl::types::GLuint,
 }
 
-impl ShaderLocations {
-    pub fn new() -> ShaderLocations {
-        ShaderLocations {
+impl Default for ShaderLocations {
+    fn default() -> Self {
+        Self {
             resolution: -1,
             time: -1,
             time_delta: -1,
-            mouse: -1
+            mouse: -1,
         }
     }
 }
 
 impl ShaderProgram {
-    pub fn new() -> ShaderProgram {
-        ShaderProgram { id: u32::MAX}
-    }
-
     pub fn is_valid(&self) -> bool {
         self.id < u32::MAX
     }
@@ -60,7 +56,7 @@ impl ShaderProgram {
         }
 
         self.id = u32::MAX;
-        return true;
+        true
     }
 
     /// Constructs a fragment shader from string.
@@ -134,6 +130,12 @@ impl ShaderProgram {
             time_delta: self.uniform_location("iTimeDelta"),
             mouse: self.uniform_location("iMouse"),
         }
+    }
+}
+
+impl Default for ShaderProgram {
+    fn default() -> Self {
+        Self { id: u32::MAX }
     }
 }
 

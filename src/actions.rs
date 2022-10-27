@@ -68,18 +68,16 @@ pub fn handle_actions(
                     if !shader_service.use_camera_integration {
                         log::info!("Enabling camera integration. Please use '#pragma skuggbox(camera)' in your shader");
                         shader_service.use_camera_integration = true;
-                        shader_service
-                            .reload();
-                            //.expect("Expected successful shader reload");
+                        shader_service.reload();
+                        //.expect("Expected successful shader reload");
                     }
                 }
                 false => {
                     if shader_service.use_camera_integration {
                         log::info!("Disabling camera integration");
                         shader_service.use_camera_integration = false;
-                        shader_service
-                            .reload();
-                            //.expect("Expected successful shader reload");
+                        shader_service.reload();
+                        //.expect("Expected successful shader reload");
                     }
                 }
             },

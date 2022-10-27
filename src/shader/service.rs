@@ -2,9 +2,8 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
-use crate::shader::{PreProcessor};
+use crate::shader::PreProcessor;
 use crate::{PreProcessorConfig, SkuggboxShader};
-
 
 /// The ShaderService handles the inputted shader files, constructs an OpenGL compatible shader
 /// as well as builds up a pre-processor for inlining include files etc.
@@ -22,11 +21,11 @@ pub struct ShaderService {
 impl ShaderService {
     pub fn new(shader_files: Vec<PathBuf>) -> Self {
         let pre_processor_config = PreProcessorConfig {
-          use_camera_integration: false
+            use_camera_integration: false,
         };
 
         let pre_processor = PreProcessor::new(pre_processor_config);
-        let shaders = SkuggboxShader::from_files(&pre_processor, shader_files.clone());
+        let shaders = SkuggboxShader::from_files(&pre_processor, shader_files);
 
         Self {
             pre_processor,
@@ -41,10 +40,11 @@ impl ShaderService {
 
         self.receiver = Some(receiver);
 
-        let all_shader_files = self.shaders
+        let all_shader_files = self
+            .shaders
             .iter()
-            .flat_map(|shader| shader.get_all_files().clone())
-            .map(|path| path.to_owned().clone())
+            .flat_map(|shader| shader.get_all_files())
+            .cloned()
             .collect();
 
         let _ = thread::spawn(move || {
@@ -64,7 +64,8 @@ impl ShaderService {
 
                 for shader in self.shaders.iter_mut() {
                     if shader.uses_file(&changed_file_path) {
-                        let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
+                        let reloaded_shader =
+                            self.pre_processor.load_file(shader.get_main_shader_path());
                         shader.mark_for_recompilation(reloaded_shader);
 
                         // TODO: If the included files change in the shader, they won't be watched
