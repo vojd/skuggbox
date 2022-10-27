@@ -31,7 +31,6 @@ impl App {
             app_state,
         } = self;
 
-
         let shader_files = config.files.unwrap();
         let mut shader_service = ShaderService::new(shader_files);
 
@@ -63,7 +62,12 @@ impl App {
                 });
             }
 
-            render(app_window, app_state, &shader_service.shaders, &vertex_buffer);
+            render(
+                app_window,
+                app_state,
+                &shader_service.shaders,
+                &vertex_buffer,
+            );
 
             app_state.timer.stop();
         }
