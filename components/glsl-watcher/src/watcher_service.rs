@@ -1,5 +1,5 @@
 use std::borrow::Borrow;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -30,9 +30,9 @@ impl WatcherService {
         }
     }
 
-    pub fn is_watching(&self, file: &PathBuf) -> bool {
+    pub fn is_watching(&self, file: &Path) -> bool {
         let files_watched = self.files_mutex.lock().unwrap();
-        files_watched.contains(file)
+        files_watched.contains(&file.to_path_buf())
     }
 
     pub fn watch(&mut self, files: Vec<PathBuf>) {
