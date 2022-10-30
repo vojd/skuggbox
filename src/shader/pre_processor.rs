@@ -47,7 +47,7 @@ impl PreProcessor {
         Self { config }
     }
 
-    pub fn load_file(&self, shader_path: &PathBuf) -> Shader {
+    pub fn load_file(&self, shader_path: PathBuf) -> Shader {
         let shader_name = shader_path.file_name().unwrap().to_str().unwrap();
         let shader_id = match shader_name.rsplit_once('.') {
             Some((left, _)) => left.to_string(),

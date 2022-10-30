@@ -34,7 +34,7 @@ impl App {
         let shader_files = config.files.unwrap();
         let mut shader_service = ShaderService::new(shader_files);
 
-        shader_service.watch();
+        shader_service.start();
 
         let vertex_buffer = Buffer::new_vertex_buffer();
         let mut actions: Vec<Action> = vec![];
@@ -68,8 +68,6 @@ impl App {
                 &shader_service.shaders,
                 &vertex_buffer,
             );
-
-
 
             app_state.timer.stop();
         }

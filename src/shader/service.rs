@@ -1,6 +1,6 @@
+use glsl_watcher::WatcherService;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
-use std::thread;
 
 use crate::shader::PreProcessor;
 use crate::{PreProcessorConfig, SkuggboxShader};
@@ -15,7 +15,8 @@ pub struct ShaderService {
     pub use_camera_integration: bool,
     /// Two way channels for listening and reacting to changes in our shader files
     pre_processor: PreProcessor,
-    receiver: Option<Receiver<PathBuf>>,
+    receiver: Receiver<PathBuf>,
+    watcher_service: WatcherService,
 }
 
 impl ShaderService {
@@ -26,30 +27,26 @@ impl ShaderService {
 
         let pre_processor = PreProcessor::new(pre_processor_config);
         let shaders = SkuggboxShader::from_files(&pre_processor, shader_files);
+        let (sender, receiver): (Sender<PathBuf>, Receiver<PathBuf>) = channel();
 
         Self {
             pre_processor,
             shaders,
             use_camera_integration: false,
-            receiver: None,
+            receiver,
+            watcher_service: WatcherService::new(sender),
         }
     }
 
-    pub fn watch(&mut self) {
-        let (sender, receiver): (Sender<PathBuf>, Receiver<PathBuf>) = channel();
-
-        self.receiver = Some(receiver);
-
+    pub fn start(&mut self) {
         let all_shader_files = self
             .shaders
             .iter()
             .flat_map(|shader| shader.get_all_files())
-            .cloned()
             .collect();
 
-        let _ = thread::spawn(move || {
-            glsl_watcher::watch_all(sender, all_shader_files);
-        });
+        self.watcher_service.watch(all_shader_files);
+        self.watcher_service.start();
     }
 
     /// This method should be called from the GL-thread.
@@ -57,22 +54,25 @@ impl ShaderService {
     /// reload the shaders whenever that happens.
     pub fn run(&mut self) {
         // pull file updates from the channel
-        if let Some(recv) = &self.receiver {
-            let value = recv.try_recv();
-            if value.is_ok() {
-                let changed_file_path = value.ok().unwrap();
+        let value = self.receiver.try_recv();
+        if value.is_ok() {
+            let changed_file_path = value.ok().unwrap();
 
-                for shader in self.shaders.iter_mut() {
-                    if shader.uses_file(&changed_file_path) {
-                        let reloaded_shader =
-                            self.pre_processor.load_file(shader.get_main_shader_path());
-                        shader.mark_for_recompilation(reloaded_shader);
+            for shader in self.shaders.iter_mut() {
+                if shader.uses_file(&changed_file_path) {
+                    // unwatch all the previous files
+                    self.watcher_service.unwatch(shader.get_all_files());
 
-                        // TODO: If the included files change in the shader, they won't be watched
-                    }
+                    // load and preprocess the shader
+                    let reloaded_shader =
+                        self.pre_processor.load_file(shader.get_main_shader_path());
+                    shader.mark_for_recompilation(reloaded_shader);
+
+                    // watch all parts of the shader
+                    self.watcher_service.watch(shader.get_all_files());
                 }
             }
-        };
+        }
 
         for shader in self.shaders.iter_mut() {
             if shader.try_to_compile() {

@@ -1,5 +1,5 @@
 use std::borrow::Borrow;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -9,11 +9,11 @@ use std::time::Duration;
 use notify::{raw_watcher, Op, RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub struct WatcherService {
-    on_change_sender: Arc<Mutex<Sender<PathBuf>>>,
-    files_mutex: Arc<Mutex<Vec<PathBuf>>>,
-    watcher: RecommendedWatcher,
-    watch_receiver: Mutex<Receiver<RawEvent>>,
     started: AtomicBool,
+    on_change_sender: Sender<PathBuf>,
+    watcher: RecommendedWatcher,
+    files_mutex: Arc<Mutex<Vec<PathBuf>>>,
+    watch_receiver: Arc<Mutex<Receiver<RawEvent>>>,
 }
 
 impl WatcherService {
@@ -22,17 +22,17 @@ impl WatcherService {
         let watcher = raw_watcher(watch_sender).unwrap();
 
         Self {
-            on_change_sender: Arc::new(Mutex::new(on_change_sender)),
-            files_mutex: Arc::new(Mutex::new(Vec::new())),
-            watcher,
-            watch_receiver: Mutex::new(watch_receiver),
             started: AtomicBool::new(false),
+            on_change_sender,
+            watcher,
+            files_mutex: Arc::new(Mutex::new(Vec::new())),
+            watch_receiver: Arc::new(Mutex::new(watch_receiver)),
         }
     }
 
-    pub fn is_watching(&self, file: &PathBuf) -> bool {
+    pub fn is_watching(&self, file: &Path) -> bool {
         let files_watched = self.files_mutex.lock().unwrap();
-        files_watched.contains(file)
+        files_watched.contains(&file.to_path_buf())
     }
 
     pub fn watch(&mut self, files: Vec<PathBuf>) {
@@ -45,7 +45,7 @@ impl WatcherService {
         let mut files_watched = self.files_mutex.lock().unwrap();
         for file in files.iter() {
             if !files_watched.contains(file) {
-                files_watched.push(file.clone());
+                files_watched.push(file.to_path_buf());
             }
         }
     }
@@ -83,31 +83,25 @@ impl WatcherService {
         }
     }
 
-    pub fn start(&'static mut self) {
+    pub fn start(&mut self) {
         if self.started.load(Ordering::Relaxed) {
             // the service had already been started, just return because we're nice people
             return;
         }
+        self.started.store(true, Ordering::Relaxed);
 
-        let files_watched = self
-            .files_mutex
-            .lock()
-            .unwrap()
-            .iter()
-            .map(|path| path.clone())
-            .collect();
+        let files_watched = self.files_mutex.lock().unwrap().iter().cloned().collect();
 
         self.watch_all(files_watched);
         self.threaded_watch_loop();
     }
 
-    fn threaded_watch_loop(&'static self) {
-        let receiver = self.watch_receiver.borrow();
-        let change_sender: &Mutex<Sender<PathBuf>> = self.on_change_sender.borrow();
+    fn threaded_watch_loop(&mut self) {
+        let receiver = Arc::clone(&self.watch_receiver);
+        let change_sender = self.on_change_sender.clone();
 
         let _ = thread::spawn(move || {
             let locked_receiver = receiver.lock().unwrap();
-            let locked_sender = change_sender.lock().unwrap();
 
             loop {
                 // NOTE: It's likely that a change to a file will trigger two successive WRITE events
@@ -135,10 +129,10 @@ impl WatcherService {
                 };
 
                 if let Some(cf) = changed_file {
-                    locked_sender.send(cf).unwrap();
+                    change_sender.send(cf).unwrap();
                 }
 
-                std::thread::sleep(Duration::from_millis(50));
+                thread::sleep(Duration::from_millis(50));
             }
         });
     }

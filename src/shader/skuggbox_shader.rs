@@ -1,5 +1,5 @@
 use crate::{PreProcessor, Shader, ShaderLocations, ShaderProgram};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// The SkuggboxShader encapsulates everything we need to load, process and render a shader program
 pub struct SkuggboxShader {
@@ -18,7 +18,7 @@ impl SkuggboxShader {
         shader_files
             .iter()
             .map(|path| {
-                let shader = pre_processor.load_file(path);
+                let shader = pre_processor.load_file(path.to_path_buf());
                 let ready_to_compile = shader.ready_to_compile;
                 SkuggboxShader {
                     shader,
@@ -31,18 +31,22 @@ impl SkuggboxShader {
     }
 
     /// Returns all files that are part of this shader due to inclusion
-    pub fn get_all_files(&self) -> Vec<&PathBuf> {
-        self.shader.parts.keys().collect()
+    pub fn get_all_files(&self) -> Vec<PathBuf> {
+        self.shader
+            .parts
+            .keys()
+            .map(|path| path.to_path_buf())
+            .collect()
     }
 
     /// Returns true if a file is used by the shader
-    pub fn uses_file(&self, path: &PathBuf) -> bool {
-        self.shader.parts.keys().any(|p| p.eq(path))
+    pub fn uses_file(&self, path: &Path) -> bool {
+        self.shader.parts.keys().any(|p| path.eq(p))
     }
 
     /// Return the main shader path from where the inclusion tree starts
-    pub fn get_main_shader_path(&self) -> &PathBuf {
-        &self.shader.main_shader_path
+    pub fn get_main_shader_path(&self) -> PathBuf {
+        self.shader.main_shader_path.to_path_buf()
     }
 
     /// Mark the shader so that it's recompiled during the next frame
