@@ -57,7 +57,7 @@ impl ShaderService {
     /// This method should be called from the GL-thread.
     /// It is basically the same as watching for file changes and the
     /// reload the shaders whenever that happens.
-    pub fn run(&mut self) {
+    pub fn run(&mut self, gl: &glow::Context) {
         // pull file updates from the channel
         if let Some(recv) = &self.receiver {
             let value = recv.try_recv();
@@ -79,7 +79,7 @@ impl ShaderService {
         for shader in self.shaders.iter_mut() {
             if shader.try_to_compile() {
                 // Hurray! The shader was compiled
-                shader.find_shader_uniforms();
+                shader.find_shader_uniforms(&gl);
             }
         }
     }

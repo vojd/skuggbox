@@ -1,3 +1,4 @@
+use glow::HasContext;
 use std::sync::Arc;
 use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
@@ -37,45 +38,47 @@ impl App {
 
         let shader_files = config.files.unwrap();
         let mut shader_service = ShaderService::new(gl_ctx.clone(), shader_files);
+        shader_service.watch();
 
-        // shader_service.watch();
-        //
-        // let vertex_buffer = Buffer::new_vertex_buffer();
+        unsafe {
+            let vertex_buffer = Buffer::new_vertex_buffer(&gl_ctx);
+        }
+
         // let mut actions: Vec<Action> = vec![];
         //
-        // while app_state.is_running {
-        //     shader_service.run();
-        //
-        //     if matches!(app_state.play_mode, PlayMode::Playing) {
-        //         app_state.timer.start();
-        //         // TODO(mathias): Remove this. Only use `app_state.timer.delta_time`
-        //         app_state.delta_time = app_state.timer.delta_time;
-        //     }
-        //
-        //     {
-        //         event_loop.run_return(|event, _, control_flow| {
-        //             handle_events(
-        //                 &event,
-        //                 control_flow,
-        //                 app_state,
-        //                 // &app_window.window_context,
-        //                 &mut actions,
-        //             );
-        //
-        //             handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
-        //         });
-        //     }
-        //
-        //     render(
-        //         app_window,
-        //         app_state,
-        //         gl_ctx,
-        //         &shader_service.shaders,
-        //         &vertex_buffer,
-        //     );
-        //
-        //     app_state.timer.stop();
-        // }
+        while app_state.is_running {
+            shader_service.run(&gl_ctx);
+            //
+            //     if matches!(app_state.play_mode, PlayMode::Playing) {
+            //         app_state.timer.start();
+            //         // TODO(mathias): Remove this. Only use `app_state.timer.delta_time`
+            //         app_state.delta_time = app_state.timer.delta_time;
+            //     }
+            //
+            //     {
+            //         event_loop.run_return(|event, _, control_flow| {
+            //             handle_events(
+            //                 &event,
+            //                 control_flow,
+            //                 app_state,
+            //                 // &app_window.window_context,
+            //                 &mut actions,
+            //             );
+            //
+            //             handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
+            //         });
+            //     }
+            //
+            //     render(
+            //         app_window,
+            //         app_state,
+            //         gl_ctx,
+            //         &shader_service.shaders,
+            //         &vertex_buffer,
+            //     );
+            //
+            //     app_state.timer.stop();
+        }
         //
         // // Cleanup
         //
@@ -102,44 +105,56 @@ fn render(
     let program = &shader.shader_program;
 
     unsafe {
-        gl::UseProgram(program.id);
+        gl_ctx.use_program(shader.shader_program);
+        if let Some(time) = shader.locations.time {
+            gl_ctx.uniform_1_f32(Some(&time), state.playback_time);
+        }
 
-        // viewport resolution in pixels
-        gl::Uniform2f(
-            shader.locations.resolution,
-            state.width as f32,
-            state.height as f32,
-        );
-
-        gl::Uniform1f(shader.locations.time, state.playback_time);
-        gl::Uniform1f(shader.locations.time_delta, state.timer.delta_time);
-
-        // push mouse location to the shader
-        gl::Uniform4f(
-            shader.locations.mouse,
-            state.mouse.pos.x,
-            state.mouse.pos.y,
-            if state.mouse.is_lmb_down { 1.0 } else { 0.0 },
-            if state.mouse.is_rmb_down { 1.0 } else { 0.0 },
-        );
-
-        // push the camera transform to the shader
-        let transform = state.camera.calculate_uniform_data();
-        let position = transform.w_axis;
-
-        let location = program.uniform_location("sbCameraPosition");
-        gl::Uniform3f(location, position.x, position.y, position.z);
-
-        let location = program.uniform_location("sbCameraTransform");
-        gl::UniformMatrix4fv(location, 1, gl::FALSE, &transform.to_cols_array()[0]);
-
-        gl::Clear(gl::COLOR_BUFFER_BIT);
-        buffer.bind();
-        gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
-
-        gl::UseProgram(0);
+        if let Some(time_delta) = shader.locations.time_delta {
+            gl_ctx.uniform_1_f32(Some(&time_delta), state.timer.delta_time);
+        }
     }
 
-    unsafe { gl::UseProgram(0) };
-    app_window.window_context.swap_buffers().unwrap();
+    //
+    // unsafe {
+    //     gl::UseProgram(program.id);
+    //
+    //     // viewport resolution in pixels
+    //     gl::Uniform2f(
+    //         shader.locations.resolution,
+    //         state.width as f32,
+    //         state.height as f32,
+    //     );
+    //
+    //     gl::Uniform1f(shader.locations.time, state.playback_time);
+    //     gl::Uniform1f(shader.locations.time_delta, state.timer.delta_time);
+    //
+    //     // push mouse location to the shader
+    //     gl::Uniform4f(
+    //         shader.locations.mouse,
+    //         state.mouse.pos.x,
+    //         state.mouse.pos.y,
+    //         if state.mouse.is_lmb_down { 1.0 } else { 0.0 },
+    //         if state.mouse.is_rmb_down { 1.0 } else { 0.0 },
+    //     );
+    //
+    //     // push the camera transform to the shader
+    //     let transform = state.camera.calculate_uniform_data();
+    //     let position = transform.w_axis;
+    //
+    //     let location = program.uniform_location("sbCameraPosition");
+    //     gl::Uniform3f(location, position.x, position.y, position.z);
+    //
+    //     let location = program.uniform_location("sbCameraTransform");
+    //     gl::UniformMatrix4fv(location, 1, gl::FALSE, &transform.to_cols_array()[0]);
+    //
+    //     gl::Clear(gl::COLOR_BUFFER_BIT);
+    //     buffer.bind(&gl_ctx);
+    //     gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+    //
+    //     gl::UseProgram(0);
+    // }
+    //
+    // unsafe { gl::UseProgram(0) };
+    // app_window.window_context.swap_buffers().unwrap();
 }
