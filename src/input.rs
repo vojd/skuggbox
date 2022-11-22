@@ -14,11 +14,12 @@ pub fn handle_events<T>(
     event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
     app_state: &mut AppState,
-    context: &ContextWrapper<PossiblyCurrent, Window>,
+    // context: &ContextWrapper<PossiblyCurrent, Window>,
     actions: &mut Vec<Action>,
 ) {
     *control_flow = ControlFlow::Poll;
-    context.swap_buffers().unwrap();
+    // TODO(mathias): Fix!
+    // context.swap_buffers().unwrap();
 
     match event {
         Event::WindowEvent { event, .. } => {

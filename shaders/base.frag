@@ -118,7 +118,7 @@ void main(void) {
 
     vec3 ro = vec3(0,0,-10);
     vec3 rd = mat3(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1)) * normalize(vec3(uv, 1));
-    skuggbox_camera(uv, ro, rd);
+//    skuggbox_camera(uv, ro, rd);
 
     vec3 color = bg(ro, rd);
 

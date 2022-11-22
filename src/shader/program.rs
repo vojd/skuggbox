@@ -141,9 +141,10 @@ impl Default for ShaderProgram {
 
 impl Drop for ShaderProgram {
     fn drop(&mut self) {
-        unsafe {
-            gl::DeleteProgram(self.id);
-        }
+        // TODO(mathias): FIX!
+        // unsafe {
+        //     // gl::DeleteProgram(self.id);
+        // }
     }
 }
 

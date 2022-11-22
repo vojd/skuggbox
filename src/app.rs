@@ -17,8 +17,6 @@ pub struct App {
 impl App {
     pub fn from_config(config: Config) -> Self {
         let (app_window, gl_ctx, event_loop) = AppWindow::new(config);
-
-        let gl_ctx = Arc::new(gl_ctx);
         let app_state = AppState::default();
 
         Self {
@@ -38,50 +36,50 @@ impl App {
         } = self;
 
         let shader_files = config.files.unwrap();
-        let mut shader_service = ShaderService::new(shader_files);
+        let mut shader_service = ShaderService::new(gl_ctx.clone(), shader_files);
 
-        shader_service.watch();
-
-        let vertex_buffer = Buffer::new_vertex_buffer();
-        let mut actions: Vec<Action> = vec![];
-
-        while app_state.is_running {
-            shader_service.run();
-
-            if matches!(app_state.play_mode, PlayMode::Playing) {
-                app_state.timer.start();
-                // TODO(mathias): Remove this. Only use `app_state.timer.delta_time`
-                app_state.delta_time = app_state.timer.delta_time;
-            }
-
-            {
-                event_loop.run_return(|event, _, control_flow| {
-                    handle_events(
-                        &event,
-                        control_flow,
-                        app_state,
-                        &app_window.window_context,
-                        &mut actions,
-                    );
-
-                    handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
-                });
-            }
-
-            render(
-                app_window,
-                app_state,
-                gl_ctx,
-                &shader_service.shaders,
-                &vertex_buffer,
-            );
-
-            app_state.timer.stop();
-        }
-
-        // Cleanup
-
-        vertex_buffer.delete();
+        // shader_service.watch();
+        //
+        // let vertex_buffer = Buffer::new_vertex_buffer();
+        // let mut actions: Vec<Action> = vec![];
+        //
+        // while app_state.is_running {
+        //     shader_service.run();
+        //
+        //     if matches!(app_state.play_mode, PlayMode::Playing) {
+        //         app_state.timer.start();
+        //         // TODO(mathias): Remove this. Only use `app_state.timer.delta_time`
+        //         app_state.delta_time = app_state.timer.delta_time;
+        //     }
+        //
+        //     {
+        //         event_loop.run_return(|event, _, control_flow| {
+        //             handle_events(
+        //                 &event,
+        //                 control_flow,
+        //                 app_state,
+        //                 // &app_window.window_context,
+        //                 &mut actions,
+        //             );
+        //
+        //             handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
+        //         });
+        //     }
+        //
+        //     render(
+        //         app_window,
+        //         app_state,
+        //         gl_ctx,
+        //         &shader_service.shaders,
+        //         &vertex_buffer,
+        //     );
+        //
+        //     app_state.timer.stop();
+        // }
+        //
+        // // Cleanup
+        //
+        // vertex_buffer.delete();
 
         Ok(())
     }

@@ -1,5 +1,6 @@
 use crate::{PreProcessor, Shader, ShaderLocations, ShaderProgram};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// The SkuggboxShader encapsulates everything we need to load, process and render a shader program
 pub struct SkuggboxShader {
@@ -12,12 +13,14 @@ pub struct SkuggboxShader {
 impl SkuggboxShader {
     /// Creates a Vec of SkuggboxShaders from a Vec of file paths.
     pub fn from_files(
+        gl: Arc<glow::Context>,
         pre_processor: &PreProcessor,
         shader_files: Vec<PathBuf>,
     ) -> Vec<SkuggboxShader> {
         shader_files
             .iter()
             .map(|path| {
+                log::info!("starting here");
                 let shader = pre_processor.load_file(path);
                 let ready_to_compile = shader.ready_to_compile;
                 SkuggboxShader {

@@ -21,6 +21,9 @@ pub struct Part {
     pub shader_name: String,
 }
 
+/// The textual components that makes up what we need to process and build an OpenGL shader
+/// The `Shader` shall never have anything to do with actual OpenGL calls but provide what the
+/// shader is called, its text content and where it resides on disk.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Shader {
     // <shader_id>.glsl
