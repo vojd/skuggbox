@@ -25,11 +25,6 @@ pub struct ShaderLocations {
     pub mouse: i32,
 }
 
-#[derive(Clone)]
-pub struct ShaderProgram {
-    pub id: gl::types::GLuint,
-}
-
 impl Default for ShaderLocations {
     fn default() -> Self {
         Self {
@@ -39,6 +34,11 @@ impl Default for ShaderLocations {
             mouse: -1,
         }
     }
+}
+
+#[derive(Clone)]
+pub struct ShaderProgram {
+    pub id: gl::types::GLuint,
 }
 
 impl ShaderProgram {

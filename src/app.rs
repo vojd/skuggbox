@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use winit::event_loop::EventLoop;
 use winit::platform::run_return::EventLoopExtRunReturn;
 
@@ -10,17 +11,21 @@ pub struct App {
     pub event_loop: EventLoop<()>,
     pub app_window: AppWindow,
     pub app_state: AppState,
+    pub gl_ctx: Arc<glow::Context>,
 }
 
 impl App {
     pub fn from_config(config: Config) -> Self {
-        let (app_window, event_loop) = AppWindow::new(config);
+        let (app_window, gl_ctx, event_loop) = AppWindow::new(config);
+
+        let gl_ctx = Arc::new(gl_ctx);
         let app_state = AppState::default();
 
         Self {
             event_loop,
             app_window,
             app_state,
+            gl_ctx,
         }
     }
 
@@ -29,6 +34,7 @@ impl App {
             event_loop,
             app_window,
             app_state,
+            gl_ctx,
         } = self;
 
         let shader_files = config.files.unwrap();
@@ -65,6 +71,7 @@ impl App {
             render(
                 app_window,
                 app_state,
+                gl_ctx,
                 &shader_service.shaders,
                 &vertex_buffer,
             );
@@ -82,8 +89,8 @@ impl App {
 
 fn render(
     app_window: &mut AppWindow,
-    // window_context: &ContextWrapper<PossiblyCurrent, Window>,
     state: &mut AppState,
+    gl_ctx: &mut Arc<glow::Context>,
     skuggbox_shaders: &[SkuggboxShader],
     buffer: &Buffer,
 ) {

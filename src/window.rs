@@ -8,7 +8,7 @@ pub struct AppWindow {
 }
 
 impl AppWindow {
-    pub fn new(config: Config) -> (Self, EventLoop<()>) {
+    pub fn new(config: Config) -> (Self, glow::Context, EventLoop<()>) {
         let event_loop = EventLoop::new();
 
         let window_builder = WindowBuilder::new()
@@ -24,6 +24,8 @@ impl AppWindow {
         let window_context = unsafe { window_context.make_current().unwrap() };
         gl::load_with(|s| window_context.get_proc_address(s) as *const _);
 
-        (Self { window_context }, event_loop)
+        let gl_context =
+            unsafe { glow::Context::from_loader_function(|s| window_context.get_proc_address(s)) };
+        (Self { window_context }, gl_context, event_loop)
     }
 }
