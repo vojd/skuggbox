@@ -14,6 +14,12 @@ uniform vec4 iMouse;
 #define STEPS 100
 #define EPS  0.002
 
+mat2 Rot(float a) {
+    float s = sin(a);
+    float c = cos(a);
+    return mat2(c, -s, s, c);
+}
+
 float sdBox(vec3 p, vec3 b) {
     vec3 d = abs(p) - b;
     return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
@@ -40,7 +46,7 @@ void main(void) {
     vec2 uv = (2.*gl_FragCoord.xy-iResolution.xy)/iResolution.y;
 
     vec3 rd = normalize(vec3(uv.x, uv.y, 1.));
-    vec3 ro = vec3(0., 0., -4.);
+    vec3 ro = vec3(0., 0., iMouse.z);
 
     camera(ro, rd, iMouse);
 

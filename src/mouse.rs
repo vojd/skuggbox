@@ -1,11 +1,11 @@
-use glam::Vec2;
-use winit::event::{ElementState, MouseButton, WindowEvent};
+use glam::{Vec2, Vec3};
+use winit::event::{ElementState, MouseButton, MouseScrollDelta, WindowEvent};
 
 use crate::event::WindowEventHandler;
 
 #[derive(Debug)]
 pub struct Mouse {
-    pub pos: Vec2,
+    pub pos: Vec3,
     pub last_pos: Vec2,
     pub delta: Vec2,
 
@@ -18,7 +18,7 @@ pub struct Mouse {
 impl Default for Mouse {
     fn default() -> Self {
         Self {
-            pos: Vec2::new(0.0, 0.0),
+            pos: Vec3::new(0.0, 0.0, 0.0),
             last_pos: Vec2::ZERO,
             delta: Vec2::new(0.0, 0.0),
 
@@ -46,8 +46,24 @@ impl WindowEventHandler for Mouse {
                         self.is_first_rmb_click = false;
                     }
 
-                    self.pos = Vec2::new(position.x as f32, position.y as f32);
+                    self.pos.x = position.x as f32;
+                    self.pos.y = position.y as f32;
                 }
+                true
+            }
+
+            WindowEvent::MouseWheel {
+                device_id,
+                delta,
+                phase,
+                modifiers,
+            } => {
+                let dir = match delta {
+                    // vertical_scroll => mouse-wheel up/down
+                    MouseScrollDelta::LineDelta(_, vertical_scroll) => vertical_scroll,
+                    MouseScrollDelta::PixelDelta(_) => &0.,
+                };
+                self.pos.z += dir;
                 true
             }
 

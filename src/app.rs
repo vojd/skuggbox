@@ -109,13 +109,24 @@ fn render(
         gl::Uniform1f(shader.locations.time, state.playback_time);
         gl::Uniform1f(shader.locations.time_delta, state.timer.delta_time);
 
+        // left mouse button = -1.0
+        // no mouse button = 0.0
+        // right mouse button = 1.0
+        let left_none_right_button_down = if state.mouse.is_lmb_down {
+            -1.0
+        } else if state.mouse.is_rmb_down {
+            1.0
+        } else {
+            0.0
+        };
+
         // push mouse location to the shader
         gl::Uniform4f(
             shader.locations.mouse,
             state.mouse.pos.x,
             state.mouse.pos.y,
-            if state.mouse.is_lmb_down { 1.0 } else { 0.0 },
-            if state.mouse.is_rmb_down { 1.0 } else { 0.0 },
+            state.mouse.pos.z,
+            left_none_right_button_down,
         );
 
         // push the camera transform to the shader
