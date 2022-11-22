@@ -1,4 +1,5 @@
-use crate::{CameraModel, Mouse, OrbitCamera, Timer};
+use crate::camera::{CameraModel, OrbitCamera};
+use crate::{Mouse, Timer};
 use serde::{Deserialize, Serialize};
 
 pub struct AppState {

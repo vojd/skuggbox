@@ -1,4 +1,5 @@
-use crate::{seek, AppState, OrbitCamera, PlayMode, PlaybackControl, ShaderService};
+use crate::camera::OrbitCamera;
+use crate::{seek, AppState, PlayMode, PlaybackControl, ShaderService};
 use glam::Vec2;
 use winit::event_loop::ControlFlow;
 
