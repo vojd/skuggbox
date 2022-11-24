@@ -1,5 +1,5 @@
 use crate::{Part, ShaderContent};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 /// Utility functions to read shader content
 /// and produce the necessary pieces to construct a
 use std::default::Default;

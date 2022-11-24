@@ -1,6 +1,5 @@
 #![allow(unsafe_code)]
 
-use std::any::Any;
 use std::{collections::HashMap, sync::Arc};
 
 use egui::{

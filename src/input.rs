@@ -1,8 +1,6 @@
-use glutin::{ContextWrapper, PossiblyCurrent};
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,
-    window::Window,
 };
 
 use crate::{
@@ -14,7 +12,6 @@ pub fn handle_events<T>(
     event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
     app_state: &mut AppState,
-    // context: &ContextWrapper<PossiblyCurrent, Window>,
     actions: &mut Vec<Action>,
 ) {
     *control_flow = ControlFlow::Poll;

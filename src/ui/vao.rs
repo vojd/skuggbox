@@ -19,7 +19,7 @@ pub(crate) struct BufferInfo {
 // ----------------------------------------------------------------------------
 
 /// Wrapper around either Emulated VAO or GL's VAO.
-pub(crate) struct VertexArrayObject {
+pub struct VertexArrayObject {
     // If `None`, we emulate VAO:s.
     vao: Option<crate::glow::VertexArray>,
     vbo: glow::Buffer,
@@ -33,6 +33,7 @@ impl VertexArrayObject {
         vbo: glow::Buffer,
         buffer_infos: Vec<BufferInfo>,
     ) -> Self {
+        log::debug!("creating vao");
         let vao = if supports_vao(gl) {
             let vao = gl.create_vertex_array().unwrap();
             check_for_gl_error!(gl, "create_vertex_array");

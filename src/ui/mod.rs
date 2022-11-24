@@ -22,7 +22,7 @@ pub use painter::{CallbackFn, Painter};
 mod misc_util;
 mod post_process;
 mod shader_version;
-mod vao;
+pub mod vao;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "winit"))]
 pub mod winit;

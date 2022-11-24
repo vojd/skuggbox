@@ -44,10 +44,12 @@ pub fn handle_actions(
             Action::TogglePlayPause => match app_state.play_mode {
                 PlayMode::Playing => {
                     app_state.play_mode = PlayMode::Paused;
+                    log::debug!("Paused");
                 }
                 PlayMode::Paused => {
                     app_state.timer.start();
                     app_state.play_mode = PlayMode::Playing;
+                    log::debug!("Playing");
                 }
             },
             Action::TimeForward(time) => {

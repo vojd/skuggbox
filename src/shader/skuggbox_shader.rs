@@ -30,7 +30,7 @@ pub struct ShaderContent {
 /// metadata around where the shader code comes from etc.
 pub struct SkuggboxShader {
     gl: Arc<glow::Context>,
-    shader_content: ShaderContent,
+    pub shader_content: ShaderContent,
     // TODO(mathias): Turn these into `Option<ShaderProgram>` etc
     pub shader_program: Option<Program>,
     pub locations: ShaderLocations,
@@ -98,7 +98,10 @@ impl SkuggboxShader {
                 self.shader_program = Some(program);
                 true
             }
-            Err(_) => false,
+            Err(err) => {
+                log::warn!("{:?}", err);
+                false
+            }
         }
     }
 
@@ -106,6 +109,8 @@ impl SkuggboxShader {
     pub fn find_shader_uniforms(&mut self, gl: &glow::Context) {
         if let Some(program) = self.shader_program {
             self.locations = ShaderProgram::uniform_locations(&gl, program);
+            log::debug!("{:?}", self.locations.time);
+            log::debug!("{:?}", self.locations.resolution);
         }
     }
 }
