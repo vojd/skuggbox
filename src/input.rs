@@ -5,12 +5,13 @@ use winit::{
 
 use crate::{
     state::{AppState, PlayMode},
-    Action, WindowEventHandler,
+    Action, EguiGlow, WindowEventHandler,
 };
 
 pub fn handle_events<T>(
     event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
+    egui_glow: &mut EguiGlow,
     app_state: &mut AppState,
     actions: &mut Vec<Action>,
 ) {
@@ -77,6 +78,7 @@ pub fn handle_events<T>(
             app_state
                 .camera
                 .handle_mouse(&app_state.mouse, app_state.delta_time);
+            egui_glow.on_event(&event);
         }
 
         Event::MainEventsCleared => {

@@ -9,7 +9,12 @@ uniform vec4 iMouse;
 
 void main(void) {
 
-    vec2 uv = (2.*fragCoord.xy-iResolution.xy)/iResolution.y;
-    fragColor = vec4(uv.xy, 0.0,1.0);
-//    fragColor = vec4(sin(iTime), 0.0, 1.0, 1.0);
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = fragCoord/iResolution.xy;
+
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+
+    // Output to screen
+    fragColor = vec4(1.0 - uv.x, 1.0-uv.y, 0.0,1.0);
 }

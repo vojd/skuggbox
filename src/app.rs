@@ -5,7 +5,8 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::{
-    handle_actions, handle_events, Action, AppState, AppWindow, Config, PlayMode, ShaderService,
+    handle_actions, handle_events, Action, AppState, AppWindow, Config, EguiGlow, PlayMode,
+    ShaderService,
 };
 
 pub struct App {
@@ -36,6 +37,9 @@ impl App {
             gl,
         } = self;
 
+        let mut egui_glow = EguiGlow::new(&event_loop, gl.clone());
+        let mut clear_color = [0.1, 0.1, 0.1];
+
         let mut actions: Vec<Action> = vec![];
 
         let shader_files = config.files.unwrap();
@@ -60,9 +64,21 @@ impl App {
 
             event_loop.run_return(|event, _, control_flow| {
                 *control_flow = ControlFlow::Wait;
+
+                let repaint_after = egui_glow.run(app_window.window_context.window(), |egui_ctx| {
+                    egui::SidePanel::left("my_side_panel").show(egui_ctx, |ui| {
+                        ui.heading("Hello World!");
+                        if ui.button("Quit").clicked() {
+                            app_state.is_running = false;
+                        }
+                        ui.color_edit_button_rgb(&mut clear_color);
+                    });
+                });
+
                 handle_events(
                     &event,
                     control_flow,
+                    &mut egui_glow,
                     app_state,
                     // &app_window.window_context,
                     &mut actions,
@@ -74,6 +90,7 @@ impl App {
             render(
                 gl.clone(),
                 vertex_array,
+                &mut egui_glow,
                 app_window,
                 app_state,
                 &shader_service,
@@ -87,6 +104,7 @@ impl App {
 fn render(
     gl: Arc<glow::Context>,
     vertex_array: VertexArray,
+    egui_glow: &mut EguiGlow,
     app_window: &AppWindow,
     state: &mut AppState,
     shader_service: &ShaderService,
@@ -94,7 +112,7 @@ fn render(
     unsafe {
         gl.bind_vertex_array(Some(vertex_array));
 
-        gl.clear_color(0.1, 0.2, 0.3, 1.0);
+        gl.clear_color(0.1, 0.2, 0.1, 1.0);
 
         if let Some(shader) = shader_service.shaders.get(0) {
             // kick shader to gpu
@@ -127,6 +145,8 @@ fn render(
             // actually render
             gl.clear(glow::COLOR_BUFFER_BIT);
             gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 3);
+
+            egui_glow.paint(app_window.window_context.window());
         }
     }
     app_window.window_context.swap_buffers().unwrap();
