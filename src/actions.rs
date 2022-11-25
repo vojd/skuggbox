@@ -62,6 +62,7 @@ pub fn handle_actions(
             }
             Action::WindowClose => {}
             Action::WindowResize((width, height)) => {
+                log::debug!("resize {:?}", width);
                 app_state.width = width;
                 app_state.height = height;
             }

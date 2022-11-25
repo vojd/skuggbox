@@ -39,9 +39,10 @@ impl App {
         let mut actions: Vec<Action> = vec![];
 
         let shader_files = config.files.unwrap();
+        log::debug!("Shader files: {:?}", shader_files);
         let mut shader_service = ShaderService::new(gl.clone(), shader_files);
         shader_service.watch();
-        shader_service.run(&gl);
+        shader_service.run(gl);
 
         let vertex_array = unsafe {
             gl.create_vertex_array()
@@ -49,7 +50,7 @@ impl App {
         };
 
         while app_state.is_running {
-            shader_service.run(&gl);
+            shader_service.run(gl);
 
             if matches!(app_state.play_mode, PlayMode::Playing) {
                 app_state.timer.start();
@@ -97,26 +98,23 @@ fn render(
 
         if let Some(shader) = shader_service.shaders.get(0) {
             // kick shader to gpu
-            gl.use_program(shader.shader_program);
+            gl.use_program(shader.program);
 
             // set uniforms
-            shader.locations.resolution.map(|resolution| {
-                gl.uniform_2_f32(Some(&resolution), state.width as f32, state.height as f32);
-                log::debug!("set resolution {:?}", resolution);
-            });
+            if let Some(resolution) = shader.locations.resolution {
+                gl.uniform_2_f32(Some(&resolution), state.width as f32, state.height as f32)
+            }
 
-            shader
-                .locations
-                .time
-                .map(|time| gl.uniform_1_f32(Some(&time), state.playback_time));
+            if let Some(time) = shader.locations.time {
+                gl.uniform_1_f32(Some(&time), state.playback_time)
+            }
 
-            shader.locations.time_delta.map(|delta_time| {
-                gl.uniform_1_f32(Some(&delta_time), state.delta_time);
-                log::debug!("set delta_time {:?}", delta_time);
-            });
+            if let Some(delta_time) = shader.locations.time_delta {
+                gl.uniform_1_f32(Some(&delta_time), state.delta_time)
+            }
 
             // Mouse uniforms
-            shader.locations.mouse.map(|mouse| {
+            if let Some(mouse) = shader.locations.mouse {
                 let x = state.mouse.pos.x;
                 let y = state.mouse.pos.y;
 
@@ -124,7 +122,7 @@ fn render(
                 let right_mouse = if state.mouse.is_rmb_down { 1.0 } else { 0.0 };
 
                 gl.uniform_4_f32(Some(&mouse), x, y, left_mouse, right_mouse);
-            });
+            };
 
             // actually render
             gl.clear(glow::COLOR_BUFFER_BIT);

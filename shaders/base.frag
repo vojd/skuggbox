@@ -4,10 +4,16 @@
 in vec2 fragCoord;
 out vec4 fragColor;
 
+
 uniform float iTime;
 uniform vec2 iResolution;
-// mx, my, zoom_level
-uniform vec4 iMouse;
+/*
+x: mouse_x,
+y: mouse_y,
+z: left_button_down,
+w: right_button_down
+*/
+uniform vec2 iMouse;
 
 #pragma skuggbox(camera)
 
@@ -134,5 +140,6 @@ void main(void) {
 
     // gamma correction
     color = pow(color, vec3(1.0/2.4));
-    fragColor = vec4(color, 1.0);
+//    fragColor = vec4(color, 1.0);
+    fragColor = vec4(mouseUV.xy, 1.0, 1.0);
 }

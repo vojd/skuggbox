@@ -24,8 +24,8 @@ impl From<String> for ShaderError {
         ShaderError::CompilationError { error: err }
     }
 }
-#[derive(Clone, Default)]
-pub struct ShaderLocations {
+#[derive(Clone, Default, Debug)]
+pub struct ShaderUniformLocations {
     pub resolution: Option<UniformLocation>,
     pub time: Option<UniformLocation>,
     pub time_delta: Option<UniformLocation>,
@@ -44,9 +44,9 @@ impl ShaderProgram {
     ) -> anyhow::Result<Program, String> {
         unsafe {
             let vert_shader = compile_shader(gl, glow::VERTEX_SHADER, VERTEX_SHADER.as_str())?;
-            check_for_gl_error!(&gl, "vertex_shader_compile");
+            check_for_gl_error!(gl, "vertex_shader_compile");
             let frag_shader = compile_shader(gl, glow::FRAGMENT_SHADER, fragment_src.as_str())?;
-            check_for_gl_error!(&gl, "fragment_shader_compile");
+            check_for_gl_error!(gl, "fragment_shader_compile");
 
             let shader_sources = vec![vert_shader, frag_shader];
             let program = link_program(gl, &shader_sources).unwrap();
@@ -57,21 +57,33 @@ impl ShaderProgram {
             gl.delete_shader(vert_shader);
             gl.delete_shader(frag_shader);
 
-            return Ok(program);
+            Ok(program)
         }
     }
 
-    /// Extract some common uniform locations
-    pub fn uniform_locations(gl: &glow::Context, program: Program) -> ShaderLocations {
-        log::debug!("Reading uniform locations");
-        unsafe {
-            ShaderLocations {
-                resolution: gl.get_uniform_location(program, "iResolution"),
-                time: gl.get_uniform_location(program, "iTime"),
-                time_delta: gl.get_uniform_location(program, "iTimeDelta"),
-                mouse: gl.get_uniform_location(program, "iMouse"),
-            }
-        }
+    /// # Safety
+    ///
+    /// Extract some common uniform locations using raw OpenGL calls, hence the unsafeness
+    pub unsafe fn uniform_locations(
+        gl: &glow::Context,
+        program: Program,
+    ) -> ShaderUniformLocations {
+        log::debug!("Reading uniform locations from program {:?}", program);
+        let time = gl.get_uniform_location(program, "iTime");
+        let resolution = gl.get_uniform_location(program, "iResolution");
+        let time_delta = gl.get_uniform_location(program, "iTimeDelta");
+        let mouse = gl.get_uniform_location(program, "iResolution");
+
+        let locations = ShaderUniformLocations {
+            resolution,
+            time,
+            time_delta,
+            mouse,
+        };
+
+        log::debug!("shader locations {:?}", locations);
+
+        locations
     }
 }
 

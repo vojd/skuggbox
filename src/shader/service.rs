@@ -80,7 +80,7 @@ impl ShaderService {
             if shader.try_to_compile() {
                 // Hurray! The shader was compiled
                 log::debug!("Shader compiled");
-                shader.find_shader_uniforms(&gl);
+                shader.find_shader_uniforms(gl);
             }
         }
     }

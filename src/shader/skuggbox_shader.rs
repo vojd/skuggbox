@@ -1,4 +1,4 @@
-use crate::{PreProcessor, ShaderLocations, ShaderProgram};
+use crate::{PreProcessor, ShaderProgram, ShaderUniformLocations};
 use glow::Program;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -30,10 +30,9 @@ pub struct ShaderContent {
 /// metadata around where the shader code comes from etc.
 pub struct SkuggboxShader {
     gl: Arc<glow::Context>,
-    pub shader_content: ShaderContent,
-    // TODO(mathias): Turn these into `Option<ShaderProgram>` etc
-    pub shader_program: Option<Program>,
-    pub locations: ShaderLocations,
+    pub content: ShaderContent,
+    pub program: Option<Program>,
+    pub locations: ShaderUniformLocations,
     pub ready_to_compile: bool,
 }
 
@@ -53,9 +52,9 @@ impl SkuggboxShader {
                 let ready_to_compile = shader.ready_to_compile;
                 Self {
                     gl: gl.clone(),
-                    shader_content: shader,
-                    shader_program: None,
-                    locations: ShaderLocations::default(),
+                    content: shader,
+                    program: None,
+                    locations: ShaderUniformLocations::default(),
                     ready_to_compile,
                 }
             })
@@ -64,23 +63,23 @@ impl SkuggboxShader {
 
     /// Returns all files that are part of this shader due to inclusion
     pub fn get_all_files(&self) -> Vec<&PathBuf> {
-        self.shader_content.parts.keys().collect()
+        self.content.parts.keys().collect()
     }
 
     /// Returns true if a file is used by the shader
     pub fn uses_file(&self, path: &PathBuf) -> bool {
-        self.shader_content.parts.keys().any(|p| p.eq(path))
+        self.content.parts.keys().any(|p| p.eq(path))
     }
 
     /// Return the main shader path from where the inclusion tree starts
     pub fn get_main_shader_path(&self) -> &PathBuf {
-        &self.shader_content.main_shader_path
+        &self.content.main_shader_path
     }
 
     /// Mark the shader so that it's recompiled during the next frame
     pub fn mark_for_recompilation(&mut self, shader: ShaderContent) {
         self.ready_to_compile = shader.ready_to_compile;
-        self.shader_content = shader;
+        self.content = shader;
     }
 
     /// Attempt to recompile the shader. Returns true if the shader was recompiled.
@@ -93,9 +92,9 @@ impl SkuggboxShader {
         // self.shader_program.free();
         self.ready_to_compile = false;
 
-        match ShaderProgram::from_frag_src(&self.gl, self.shader_content.shader_src.clone()) {
+        match ShaderProgram::from_frag_src(&self.gl, self.content.shader_src.clone()) {
             Ok(program) => {
-                self.shader_program = Some(program);
+                self.program = Some(program);
                 true
             }
             Err(err) => {
@@ -107,10 +106,10 @@ impl SkuggboxShader {
 
     /// Detected uniforms in the shader source
     pub fn find_shader_uniforms(&mut self, gl: &glow::Context) {
-        if let Some(program) = self.shader_program {
-            self.locations = ShaderProgram::uniform_locations(&gl, program);
-            log::debug!("{:?}", self.locations.time);
-            log::debug!("{:?}", self.locations.resolution);
+        if let Some(program) = self.program {
+            self.locations = unsafe { ShaderProgram::uniform_locations(gl, program) };
+            log::debug!("time: {:?}", self.locations.time);
+            log::debug!("resolution: {:?}", self.locations.resolution);
         }
     }
 }
