@@ -33,7 +33,6 @@ impl VertexArrayObject {
         vbo: glow::Buffer,
         buffer_infos: Vec<BufferInfo>,
     ) -> Self {
-        log::debug!("creating vao");
         let vao = if supports_vao(gl) {
             let vao = gl.create_vertex_array().unwrap();
             check_for_gl_error!(gl, "create_vertex_array");

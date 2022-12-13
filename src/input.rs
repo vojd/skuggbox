@@ -5,13 +5,13 @@ use winit::{
 
 use crate::{
     state::{AppState, PlayMode},
-    Action, EguiGlow, WindowEventHandler,
+    Action, Ui, WindowEventHandler,
 };
 
 pub fn handle_events<T>(
     event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
-    egui_glow: &mut EguiGlow,
+    ui: &mut Ui,
     app_state: &mut AppState,
     actions: &mut Vec<Action>,
 ) {
@@ -64,6 +64,10 @@ pub fn handle_events<T>(
                                     // reset all camera settings
                                     actions.push(Action::CameraReset);
                                 }
+
+                                // UI controls
+                                VirtualKeyCode::Tab => actions.push(Action::UIToggleVisible),
+                                VirtualKeyCode::F11 => actions.push(Action::ToggleFullscreen),
                                 _ => {}
                             }
                         }
@@ -78,7 +82,7 @@ pub fn handle_events<T>(
             app_state
                 .camera
                 .handle_mouse(&app_state.mouse, app_state.delta_time);
-            egui_glow.on_event(&event);
+            ui.on_event(event);
         }
 
         Event::MainEventsCleared => {

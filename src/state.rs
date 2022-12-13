@@ -13,6 +13,8 @@ pub struct AppState {
     pub mouse: Mouse,
     /// Running or paused?
     pub play_mode: PlayMode,
+    pub ui_visible: bool,
+    pub is_fullscreen: bool,
     pub camera: Box<dyn CameraModel>,
 }
 
@@ -27,6 +29,8 @@ impl Default for AppState {
             playback_time: 0.0,
             mouse: Mouse::default(),
             play_mode: PlayMode::Playing,
+            ui_visible: true,
+            is_fullscreen: false,
             camera: Box::from(OrbitCamera::default()),
         }
     }

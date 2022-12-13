@@ -2,19 +2,22 @@ use glow::Context;
 use glutin::PossiblyCurrent;
 use winit::event_loop::EventLoop;
 
-use crate::Config;
+use crate::{AppState, Config};
 
 pub struct AppWindow {
     pub window_context: glutin::WindowedContext<PossiblyCurrent>,
 }
 
 impl AppWindow {
-    pub fn new(config: Config) -> (Self, Context, EventLoop<()>) {
+    pub fn new(config: Config, app_state: &AppState) -> (Self, Context, EventLoop<()>) {
         let event_loop = glutin::event_loop::EventLoop::new();
         let window_builder = glutin::window::WindowBuilder::new()
             .with_title("Skuggbox")
             .with_always_on_top(config.always_on_top)
-            .with_inner_size(glutin::dpi::LogicalSize::new(1024.0, 768.0));
+            .with_inner_size(glutin::dpi::LogicalSize::new(
+                app_state.width,
+                app_state.height,
+            ));
 
         let window_context = unsafe {
             glutin::ContextBuilder::new()

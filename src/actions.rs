@@ -16,6 +16,9 @@ pub enum Action {
     // size
     CameraToggleIntegration(bool),
     CameraReset,
+    UIToggleVisible,
+    ToggleFullscreen,
+    Screenshot,
 }
 
 pub fn handle_actions(
@@ -62,7 +65,6 @@ pub fn handle_actions(
             }
             Action::WindowClose => {}
             Action::WindowResize((width, height)) => {
-                log::debug!("resize {:?}", width);
                 app_state.width = width;
                 app_state.height = height;
             }
@@ -88,6 +90,15 @@ pub fn handle_actions(
             Action::CameraReset => {
                 app_state.camera = Box::from(OrbitCamera::default());
                 app_state.mouse.delta = Vec2::new(0.0, 0.0);
+            }
+            Action::UIToggleVisible => {
+                app_state.ui_visible = !app_state.ui_visible;
+            }
+            Action::ToggleFullscreen => {
+                app_state.is_fullscreen = !app_state.is_fullscreen;
+            }
+            Action::Screenshot => {
+                log::debug!("Take screenshot. To be implemented.");
             }
         }
     }

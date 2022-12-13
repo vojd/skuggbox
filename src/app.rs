@@ -5,8 +5,7 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::{
-    handle_actions, handle_events, Action, AppState, AppWindow, Config, EguiGlow, PlayMode,
-    ShaderService,
+    handle_actions, handle_events, Action, AppState, AppWindow, Config, PlayMode, ShaderService, Ui,
 };
 
 pub struct App {
@@ -18,8 +17,8 @@ pub struct App {
 
 impl App {
     pub fn from_config(config: Config) -> Self {
-        let (app_window, gl, event_loop) = AppWindow::new(config);
         let app_state = AppState::default();
+        let (app_window, gl, event_loop) = AppWindow::new(config, &app_state);
 
         Self {
             event_loop,
@@ -37,8 +36,7 @@ impl App {
             gl,
         } = self;
 
-        let mut egui_glow = EguiGlow::new(&event_loop, gl.clone());
-        let mut clear_color = [0.1, 0.1, 0.1];
+        let mut ui = Ui::new(event_loop, gl.clone());
 
         let mut actions: Vec<Action> = vec![];
 
@@ -65,20 +63,38 @@ impl App {
             event_loop.run_return(|event, _, control_flow| {
                 *control_flow = ControlFlow::Wait;
 
-                let repaint_after = egui_glow.run(app_window.window_context.window(), |egui_ctx| {
-                    egui::SidePanel::left("my_side_panel").show(egui_ctx, |ui| {
-                        ui.heading("Hello World!");
-                        if ui.button("Quit").clicked() {
-                            app_state.is_running = false;
-                        }
-                        ui.color_edit_button_rgb(&mut clear_color);
+                let _repaint_after = ui.run(app_window.window_context.window(), |egui_ctx| {
+                    egui::TopBottomPanel::top("view_top").show(egui_ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            if ui.button("⏹").clicked() {
+                                actions.push(Action::TogglePlayPause);
+                                actions.push(Action::TimeStop);
+                            }
+                            // rewind
+                            if ui.button("⏪").clicked() {
+                                actions.push(Action::TimeRewind(1.0))
+                            }
+                            // play/pause
+                            let play_mode_label = match app_state.play_mode {
+                                PlayMode::Playing => "⏸",
+                                PlayMode::Paused => "▶",
+                            };
+                            if ui.button(play_mode_label).clicked() {
+                                actions.push(Action::TogglePlayPause)
+                            }
+
+                            // fast forward
+                            if ui.button("⏩").clicked() {
+                                actions.push(Action::TimeForward(1.0))
+                            }
+                        });
                     });
                 });
 
                 handle_events(
                     &event,
                     control_flow,
-                    &mut egui_glow,
+                    &mut ui,
                     app_state,
                     // &app_window.window_context,
                     &mut actions,
@@ -90,7 +106,7 @@ impl App {
             render(
                 gl.clone(),
                 vertex_array,
-                &mut egui_glow,
+                &mut ui,
                 app_window,
                 app_state,
                 &shader_service,
@@ -104,7 +120,7 @@ impl App {
 fn render(
     gl: Arc<glow::Context>,
     vertex_array: VertexArray,
-    egui_glow: &mut EguiGlow,
+    egui_glow: &mut Ui,
     app_window: &AppWindow,
     state: &mut AppState,
     shader_service: &ShaderService,
@@ -146,7 +162,9 @@ fn render(
             gl.clear(glow::COLOR_BUFFER_BIT);
             gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 3);
 
-            egui_glow.paint(app_window.window_context.window());
+            if state.ui_visible {
+                egui_glow.paint(app_window.window_context.window());
+            }
         }
     }
     app_window.window_context.swap_buffers().unwrap();

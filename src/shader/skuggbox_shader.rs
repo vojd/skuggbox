@@ -47,7 +47,6 @@ impl SkuggboxShader {
         shader_files
             .iter()
             .map(|path| {
-                log::info!("starting here");
                 let shader = pre_processor.load_file(path);
                 let ready_to_compile = shader.ready_to_compile;
                 Self {
@@ -108,8 +107,6 @@ impl SkuggboxShader {
     pub fn find_shader_uniforms(&mut self, gl: &glow::Context) {
         if let Some(program) = self.program {
             self.locations = unsafe { ShaderProgram::uniform_locations(gl, program) };
-            log::debug!("time: {:?}", self.locations.time);
-            log::debug!("resolution: {:?}", self.locations.resolution);
         }
     }
 }
