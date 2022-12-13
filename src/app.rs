@@ -91,14 +91,7 @@ impl App {
                     });
                 });
 
-                handle_events(
-                    &event,
-                    control_flow,
-                    &mut ui,
-                    app_state,
-                    // &app_window.window_context,
-                    &mut actions,
-                );
+                handle_events(&event, control_flow, &mut ui, app_state, &mut actions);
 
                 handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
             });

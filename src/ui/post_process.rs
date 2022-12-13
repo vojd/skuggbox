@@ -88,8 +88,6 @@ impl PostProcess {
 
         // ---------------------------------------------------------
         // Depth buffer - we only need this when embedding 3D within egui using `egui::PaintCallback`.
-        // TODO(emilk): add a setting to enable/disable the depth buffer.
-
         let with_depth_buffer = true;
         let depth_renderbuffer = if with_depth_buffer {
             let depth_renderbuffer = gl.create_renderbuffer()?;
