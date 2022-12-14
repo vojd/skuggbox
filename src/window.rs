@@ -1,29 +1,36 @@
-use crate::Config;
-use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
+use glow::Context;
+use glutin::PossiblyCurrent;
 use winit::event_loop::EventLoop;
-use winit::window::{Window, WindowBuilder};
+
+use crate::{AppState, Config};
 
 pub struct AppWindow {
-    pub window_context: ContextWrapper<PossiblyCurrent, Window>,
+    pub window_context: glutin::WindowedContext<PossiblyCurrent>,
 }
 
 impl AppWindow {
-    pub fn new(config: Config) -> (Self, EventLoop<()>) {
-        let event_loop = EventLoop::new();
-
-        let window_builder = WindowBuilder::new()
+    pub fn new(config: Config, app_state: &AppState) -> (Self, Context, EventLoop<()>) {
+        let event_loop = glutin::event_loop::EventLoop::new();
+        let window_builder = glutin::window::WindowBuilder::new()
             .with_title("Skuggbox")
-            .with_always_on_top(config.always_on_top);
+            .with_always_on_top(config.always_on_top)
+            .with_inner_size(glutin::dpi::LogicalSize::new(
+                app_state.width,
+                app_state.height,
+            ));
 
-        // Using the ContextBuilder instead of window_builder.build() to get an OpenGL context
-        let window_context = ContextBuilder::new()
-            .build_windowed(window_builder, &event_loop)
-            .unwrap();
+        let window_context = unsafe {
+            glutin::ContextBuilder::new()
+                .with_vsync(true)
+                .build_windowed(window_builder, &event_loop)
+                .unwrap()
+                .make_current()
+                .unwrap()
+        };
+        let gl = unsafe {
+            glow::Context::from_loader_function(|s| window_context.get_proc_address(s) as *const _)
+        };
 
-        // Load the OpenGL context
-        let window_context = unsafe { window_context.make_current().unwrap() };
-        gl::load_with(|s| window_context.get_proc_address(s) as *const _);
-
-        (Self { window_context }, event_loop)
+        (Self { window_context }, gl, event_loop)
     }
 }

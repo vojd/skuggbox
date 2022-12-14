@@ -1,24 +1,23 @@
-use glutin::{ContextWrapper, PossiblyCurrent};
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,
-    window::Window,
 };
 
 use crate::{
     state::{AppState, PlayMode},
-    Action, WindowEventHandler,
+    Action, Ui, WindowEventHandler,
 };
 
 pub fn handle_events<T>(
     event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
+    ui: &mut Ui,
     app_state: &mut AppState,
-    context: &ContextWrapper<PossiblyCurrent, Window>,
     actions: &mut Vec<Action>,
 ) {
     *control_flow = ControlFlow::Poll;
-    context.swap_buffers().unwrap();
+    // TODO(mathias): Fix!
+    // context.swap_buffers().unwrap();
 
     match event {
         Event::WindowEvent { event, .. } => {
@@ -65,6 +64,10 @@ pub fn handle_events<T>(
                                     // reset all camera settings
                                     actions.push(Action::CameraReset);
                                 }
+
+                                // UI controls
+                                VirtualKeyCode::Tab => actions.push(Action::UIToggleVisible),
+                                VirtualKeyCode::F11 => actions.push(Action::ToggleFullscreen),
                                 _ => {}
                             }
                         }
@@ -79,6 +82,7 @@ pub fn handle_events<T>(
             app_state
                 .camera
                 .handle_mouse(&app_state.mouse, app_state.delta_time);
+            ui.on_event(event);
         }
 
         Event::MainEventsCleared => {

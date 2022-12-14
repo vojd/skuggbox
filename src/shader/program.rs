@@ -1,4 +1,6 @@
 use crate::VERTEX_SHADER;
+use egui::TextBuffer;
+use glow::{HasContext, Program, UniformLocation};
 use std::ffi::CString;
 
 pub fn cstr_with_len(len: usize) -> CString {
@@ -17,181 +19,107 @@ pub enum ShaderError {
     FileError { error: String },
 }
 
-#[derive(Clone)]
-pub struct ShaderLocations {
-    pub resolution: i32,
-    pub time: i32,
-    pub time_delta: i32,
-    pub mouse: i32,
+impl From<String> for ShaderError {
+    fn from(err: String) -> Self {
+        ShaderError::CompilationError { error: err }
+    }
+}
+#[derive(Clone, Default, Debug)]
+pub struct ShaderUniformLocations {
+    pub resolution: Option<UniformLocation>,
+    pub time: Option<UniformLocation>,
+    pub time_delta: Option<UniformLocation>,
+    pub mouse: Option<UniformLocation>,
 }
 
 #[derive(Clone)]
 pub struct ShaderProgram {
-    pub id: gl::types::GLuint,
-}
-
-impl Default for ShaderLocations {
-    fn default() -> Self {
-        Self {
-            resolution: -1,
-            time: -1,
-            time_delta: -1,
-            mouse: -1,
-        }
-    }
+    pub program: Program,
 }
 
 impl ShaderProgram {
-    pub fn is_valid(&self) -> bool {
-        self.id < u32::MAX
-    }
-
-    pub fn free(&mut self) -> bool {
-        if !self.is_valid() {
-            return false;
-        }
-
+    pub fn from_frag_src(
+        gl: &glow::Context,
+        fragment_src: String,
+    ) -> anyhow::Result<Program, String> {
         unsafe {
-            gl::DeleteProgram(self.id);
-        }
+            let vert_shader = compile_shader(gl, glow::VERTEX_SHADER, VERTEX_SHADER.as_str())?;
+            macros::check_for_gl_error!(gl, "vertex_shader_compile");
+            let frag_shader = compile_shader(gl, glow::FRAGMENT_SHADER, fragment_src.as_str())?;
+            macros::check_for_gl_error!(gl, "fragment_shader_compile");
 
-        self.id = u32::MAX;
-        true
+            let shader_sources = vec![vert_shader, frag_shader];
+            let program = link_program(gl, &shader_sources).unwrap();
+            log::debug!("Program created");
+            gl.detach_shader(program, vert_shader);
+            gl.detach_shader(program, frag_shader);
+
+            gl.delete_shader(vert_shader);
+            gl.delete_shader(frag_shader);
+
+            Ok(program)
+        }
     }
 
-    /// Constructs a fragment shader from string.
-    /// Adds on a simple vertex shader.
-    pub fn from_frag_src(fragment_src: String) -> anyhow::Result<Self, ShaderError> {
-        let vert_shader_id = shader_from_string(String::from(VERTEX_SHADER), gl::VERTEX_SHADER)?;
-        let frag_shader_id = shader_from_string(fragment_src, gl::FRAGMENT_SHADER)?;
-        log::info!(
-            "Creating shader program: {} {}",
-            vert_shader_id,
-            frag_shader_id
-        );
-        let id = unsafe { gl::CreateProgram() };
-        unsafe {
-            gl::AttachShader(id, vert_shader_id);
-            gl::AttachShader(id, frag_shader_id);
-            gl::LinkProgram(id);
-        }
+    /// # Safety
+    ///
+    /// Extract some common uniform locations using raw OpenGL calls, hence the unsafeness
+    pub unsafe fn uniform_locations(
+        gl: &glow::Context,
+        program: Program,
+    ) -> ShaderUniformLocations {
+        log::debug!("Reading uniform locations from program {:?}", program);
+        let time = gl.get_uniform_location(program, "iTime");
+        let resolution = gl.get_uniform_location(program, "iResolution");
+        let time_delta = gl.get_uniform_location(program, "iTimeDelta");
+        let mouse = gl.get_uniform_location(program, "iResolution");
 
-        let mut success: gl::types::GLint = 1;
-        unsafe {
-            gl::GetProgramiv(id, gl::LINK_STATUS, &mut success);
-        }
+        let locations = ShaderUniformLocations {
+            resolution,
+            time,
+            time_delta,
+            mouse,
+        };
 
-        if success == 0 {
-            let mut len: gl::types::GLint = 0;
-            unsafe {
-                gl::GetProgramiv(id, gl::INFO_LOG_LENGTH, &mut len);
-            }
+        log::debug!("shader locations {:?}", locations);
 
-            let error = cstr_with_len(len as usize);
-
-            unsafe {
-                gl::GetProgramInfoLog(
-                    id,
-                    len,
-                    std::ptr::null_mut(),
-                    error.as_ptr() as *mut gl::types::GLchar,
-                );
-            }
-            log::error!("linker error {}", error.to_string_lossy());
-            panic!("linker error");
-        }
-
-        unsafe {
-            gl::DetachShader(id, vert_shader_id);
-            gl::DetachShader(id, frag_shader_id);
-        }
-
-        Ok(Self { id })
-    }
-
-    pub fn from_source(
-        source: String,
-        shader_type: gl::types::GLuint,
-    ) -> anyhow::Result<Self, ShaderError> {
-        let id = shader_from_string(source, shader_type)?;
-        Ok(ShaderProgram { id })
-    }
-
-    #[allow(temporary_cstring_as_ptr)]
-    pub fn uniform_location(&self, uniform_name: &str) -> i32 {
-        unsafe { gl::GetUniformLocation(self.id, CString::new(uniform_name).unwrap().as_ptr()) }
-    }
-
-    /// Extract some common uniform locations
-    pub fn uniform_locations(&self) -> ShaderLocations {
-        ShaderLocations {
-            resolution: self.uniform_location("iResolution"),
-            time: self.uniform_location("iTime"),
-            time_delta: self.uniform_location("iTimeDelta"),
-            mouse: self.uniform_location("iMouse"),
-        }
+        locations
     }
 }
 
-impl Default for ShaderProgram {
-    fn default() -> Self {
-        Self { id: u32::MAX }
+pub(crate) unsafe fn compile_shader(
+    gl: &glow::Context,
+    shader_type: u32,
+    source: &str,
+) -> Result<glow::Shader, String> {
+    let shader = gl.create_shader(shader_type)?;
+
+    gl.shader_source(shader, source);
+
+    gl.compile_shader(shader);
+
+    if gl.get_shader_compile_status(shader) {
+        Ok(shader)
+    } else {
+        Err(gl.get_shader_info_log(shader))
     }
 }
 
-impl Drop for ShaderProgram {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteProgram(self.id);
-        }
-    }
-}
+pub(crate) unsafe fn link_program<'a, T: IntoIterator<Item = &'a glow::Shader>>(
+    gl: &glow::Context,
+    shaders: T,
+) -> Result<glow::Program, String> {
+    let program = gl.create_program()?;
 
-fn shader_from_string(
-    source: String,
-    shader_type: gl::types::GLuint,
-) -> anyhow::Result<gl::types::GLuint, ShaderError> {
-    let c_src = CString::new(source).expect("Could not convert source to CString");
-
-    // check for includes
-
-    let id = unsafe { gl::CreateShader(shader_type) };
-
-    unsafe {
-        gl::ShaderSource(id, 1, &c_src.as_ptr(), std::ptr::null());
-        gl::CompileShader(id);
+    for shader in shaders {
+        gl.attach_shader(program, *shader);
     }
 
-    let mut success: gl::types::GLint = 1;
-    unsafe {
-        gl::GetShaderiv(id, gl::COMPILE_STATUS, &mut success);
+    gl.link_program(program);
+
+    if gl.get_program_link_status(program) {
+        Ok(program)
+    } else {
+        Err(gl.get_program_info_log(program))
     }
-
-    // in case something failed we want to extract the error and return it
-    if success == 0 {
-        // fetch the required buffer length
-        let mut len: gl::types::GLint = 0;
-        unsafe {
-            gl::GetShaderiv(id, gl::INFO_LOG_LENGTH, &mut len);
-        }
-
-        let error = cstr_with_len(len as usize);
-
-        unsafe {
-            gl::GetShaderInfoLog(
-                id,
-                len,
-                std::ptr::null_mut(),
-                error.as_ptr() as *mut gl::types::GLchar,
-            )
-        }
-
-        // Prints the compilation error to console
-        log::error!("{}", error.to_string_lossy());
-        return Err(ShaderError::CompilationError {
-            error: cstr_to_str(&error),
-        });
-    }
-
-    Ok(id)
 }

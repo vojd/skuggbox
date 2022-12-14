@@ -1,4 +1,5 @@
-use crate::{seek, AppState, OrbitCamera, PlayMode, PlaybackControl, ShaderService};
+use crate::camera::OrbitCamera;
+use crate::{seek, AppState, PlayMode, PlaybackControl, ShaderService};
 use glam::Vec2;
 use winit::event_loop::ControlFlow;
 
@@ -15,6 +16,9 @@ pub enum Action {
     // size
     CameraToggleIntegration(bool),
     CameraReset,
+    UIToggleVisible,
+    ToggleFullscreen,
+    Screenshot,
 }
 
 pub fn handle_actions(
@@ -43,10 +47,12 @@ pub fn handle_actions(
             Action::TogglePlayPause => match app_state.play_mode {
                 PlayMode::Playing => {
                     app_state.play_mode = PlayMode::Paused;
+                    log::debug!("Paused");
                 }
                 PlayMode::Paused => {
                     app_state.timer.start();
                     app_state.play_mode = PlayMode::Playing;
+                    log::debug!("Playing");
                 }
             },
             Action::TimeForward(time) => {
@@ -84,6 +90,15 @@ pub fn handle_actions(
             Action::CameraReset => {
                 app_state.camera = Box::from(OrbitCamera::default());
                 app_state.mouse.delta = Vec2::new(0.0, 0.0);
+            }
+            Action::UIToggleVisible => {
+                app_state.ui_visible = !app_state.ui_visible;
+            }
+            Action::ToggleFullscreen => {
+                app_state.is_fullscreen = !app_state.is_fullscreen;
+            }
+            Action::Screenshot => {
+                log::debug!("Take screenshot. To be implemented.");
             }
         }
     }

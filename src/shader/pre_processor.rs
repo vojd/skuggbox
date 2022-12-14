@@ -1,4 +1,5 @@
-use std::collections::{BTreeMap, HashSet};
+use crate::{Part, ShaderContent};
+use std::collections::HashSet;
 /// Utility functions to read shader content
 /// and produce the necessary pieces to construct a
 use std::default::Default;
@@ -12,24 +13,6 @@ use crate::utils::pragma_shader_name;
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum PragmaDirective {
     Camera(String),
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Part {
-    pub shader_path: PathBuf,
-    pub shader_src: String,
-    pub shader_name: String,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Shader {
-    // <shader_id>.glsl
-    pub shader_id: String,
-    pub main_shader_path: PathBuf,
-    pub parts: BTreeMap<PathBuf, Part>,
-    // contains the final shader
-    pub shader_src: String,
-    pub ready_to_compile: bool,
 }
 
 #[derive(Clone)]
@@ -47,14 +30,14 @@ impl PreProcessor {
         Self { config }
     }
 
-    pub fn load_file(&self, shader_path: &PathBuf) -> Shader {
+    pub fn load_file(&self, shader_path: &PathBuf) -> ShaderContent {
         let shader_name = shader_path.file_name().unwrap().to_str().unwrap();
         let shader_id = match shader_name.rsplit_once('.') {
             Some((left, _)) => left.to_string(),
             None => shader_name.to_string(),
         };
 
-        let mut shader = Shader {
+        let mut shader_content = ShaderContent {
             shader_id,
             main_shader_path: shader_path.to_owned(),
             parts: Default::default(),
@@ -64,27 +47,27 @@ impl PreProcessor {
 
         let mut loaded_files: HashSet<PathBuf> = HashSet::new();
 
-        match self.process_part(&mut shader, &mut loaded_files, shader_path.clone()) {
+        match self.process_part(&mut shader_content, &mut loaded_files, shader_path.clone()) {
             Ok(main_part) => {
                 let path = match shader_path.canonicalize() {
                     Ok(x) => x,
                     Err(_) => shader_path.to_owned(),
                 };
-                shader.parts.insert(path, main_part.clone());
-                shader.shader_src = main_part.shader_src;
-                shader.ready_to_compile = true;
+                shader_content.parts.insert(path, main_part.clone());
+                shader_content.shader_src = main_part.shader_src;
+                shader_content.ready_to_compile = true;
             }
             Err(e) => {
                 log::error!("Error reading shader {:?}: {:?}", shader_path, e);
             }
         }
 
-        shader
+        shader_content
     }
 
     fn process_part(
         &self,
-        shader: &mut Shader,
+        shader: &mut ShaderContent,
         loaded_files: &mut HashSet<PathBuf>,
         shader_path: PathBuf,
     ) -> anyhow::Result<Part, ShaderError> {
@@ -115,7 +98,7 @@ impl PreProcessor {
 
     fn process_includes(
         &self,
-        shader: &mut Shader,
+        shader: &mut ShaderContent,
         loaded_files: &mut HashSet<PathBuf>,
         shader_path: &Path,
         source: String,

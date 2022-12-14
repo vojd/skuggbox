@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "components/glsl-watcher",
+    "components/macros",
 ]
 
 [package]
@@ -11,17 +12,24 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
+egui = { version = "0.19.0", features = ["bytemuck"]}
+egui-winit = { version = "0.19.0", optional = false, default-features = true }
+bytemuck = "1.7"
 gl = "*"
 glam = "0.18"
+glow = "0.11"
 glsl-watcher = { path = "components/glsl-watcher", version = "0.0.1" }
-glutin = "0.26"
+glutin = "0.29"
 log = "0.4"
 notify = "4.0.12"
+macros = { path = "components/macros", version = "0.1" }
+memoffset = "0.6"
 regex = "1.5.4"
 serde = { version = "1.0", features = ["derive"] }
 simple_logger = "1.11.0"
+tracing = { version = "0.1", default-features = false, features = ["std"] }
 quote = "1.0.10"
 clap = "^3.0.0-beta.4"
 #clap = { git = "https://github.com/clap-rs/clap/", version = "3.0.0-beta.4" } #clap-v3 = "3.0.0-beta.1"
-winit = "0.24"
+winit = "0.27"
 which = "4.2.2" # Used for locating minime-preprocess

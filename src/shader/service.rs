@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::Arc;
 use std::thread;
 
 use crate::shader::PreProcessor;
@@ -19,13 +20,14 @@ pub struct ShaderService {
 }
 
 impl ShaderService {
-    pub fn new(shader_files: Vec<PathBuf>) -> Self {
+    pub fn new(gl: Arc<glow::Context>, shader_files: Vec<PathBuf>) -> Self {
         let pre_processor_config = PreProcessorConfig {
             use_camera_integration: false,
         };
 
         let pre_processor = PreProcessor::new(pre_processor_config);
-        let shaders = SkuggboxShader::from_files(&pre_processor, shader_files);
+        log::info!("pre processor done");
+        let shaders = SkuggboxShader::from_files(gl, &pre_processor, shader_files);
 
         Self {
             pre_processor,
@@ -55,7 +57,7 @@ impl ShaderService {
     /// This method should be called from the GL-thread.
     /// It is basically the same as watching for file changes and the
     /// reload the shaders whenever that happens.
-    pub fn run(&mut self) {
+    pub fn run(&mut self, gl: &glow::Context) {
         // pull file updates from the channel
         if let Some(recv) = &self.receiver {
             let value = recv.try_recv();
@@ -77,7 +79,8 @@ impl ShaderService {
         for shader in self.shaders.iter_mut() {
             if shader.try_to_compile() {
                 // Hurray! The shader was compiled
-                shader.find_shader_uniforms();
+                log::debug!("Shader compiled");
+                shader.find_shader_uniforms(gl);
             }
         }
     }
