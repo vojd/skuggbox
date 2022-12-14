@@ -24,11 +24,6 @@ mod post_process;
 mod shader_version;
 pub mod vao;
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "winit"))]
-pub mod winit;
-#[cfg(all(not(target_arch = "wasm32"), feature = "winit"))]
-pub use winit::*;
-
 /// Check for OpenGL error and report it using `tracing::error`.
 ///
 /// WARNING: slow! Only use during setup!
