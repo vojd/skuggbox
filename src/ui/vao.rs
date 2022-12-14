@@ -1,9 +1,6 @@
 #![allow(unsafe_code)]
 
 use glow::HasContext as _;
-
-use crate::check_for_gl_error;
-
 // ----------------------------------------------------------------------------
 
 #[derive(Debug)]
@@ -35,7 +32,7 @@ impl VertexArrayObject {
     ) -> Self {
         let vao = if supports_vao(gl) {
             let vao = gl.create_vertex_array().unwrap();
-            check_for_gl_error!(gl, "create_vertex_array");
+            macros::check_for_gl_error!(gl, "create_vertex_array");
 
             // Store state in the VAO:
             gl.bind_vertex_array(Some(vao));
@@ -50,9 +47,9 @@ impl VertexArrayObject {
                     attribute.stride,
                     attribute.offset,
                 );
-                check_for_gl_error!(gl, "vertex_attrib_pointer_f32");
+                macros::check_for_gl_error!(gl, "vertex_attrib_pointer_f32");
                 gl.enable_vertex_attrib_array(attribute.location);
-                check_for_gl_error!(gl, "enable_vertex_attrib_array");
+                macros::check_for_gl_error!(gl, "enable_vertex_attrib_array");
             }
 
             gl.bind_vertex_array(None);
@@ -73,10 +70,10 @@ impl VertexArrayObject {
     pub(crate) unsafe fn bind(&self, gl: &glow::Context) {
         if let Some(vao) = self.vao {
             gl.bind_vertex_array(Some(vao));
-            check_for_gl_error!(gl, "bind_vertex_array");
+            macros::check_for_gl_error!(gl, "bind_vertex_array");
         } else {
             gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
-            check_for_gl_error!(gl, "bind_buffer");
+            macros::check_for_gl_error!(gl, "bind_buffer");
 
             for attribute in &self.buffer_infos {
                 gl.vertex_attrib_pointer_f32(
@@ -87,9 +84,9 @@ impl VertexArrayObject {
                     attribute.stride,
                     attribute.offset,
                 );
-                check_for_gl_error!(gl, "vertex_attrib_pointer_f32");
+                macros::check_for_gl_error!(gl, "vertex_attrib_pointer_f32");
                 gl.enable_vertex_attrib_array(attribute.location);
-                check_for_gl_error!(gl, "enable_vertex_attrib_array");
+                macros::check_for_gl_error!(gl, "enable_vertex_attrib_array");
             }
         }
     }

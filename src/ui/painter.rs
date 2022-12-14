@@ -9,7 +9,6 @@ use egui::{
 use glow::HasContext as _;
 use memoffset::offset_of;
 
-use crate::check_for_gl_error;
 use crate::ui::post_process::PostProcess;
 
 use crate::ui::misc_util::{compile_shader, link_program};
@@ -17,6 +16,7 @@ use crate::ui::shader_version::ShaderVersion;
 use crate::ui::vao;
 use crate::ui::vao::VertexArrayObject;
 pub use glow::Context;
+use macros::check_for_gl_error;
 
 const VERT_SRC: &str = include_str!("shader/vertex.glsl");
 const FRAG_SRC: &str = include_str!("shader/fragment.glsl");
@@ -109,8 +109,8 @@ impl Painter {
         pp_fb_extent: Option<[i32; 2]>,
         shader_prefix: &str,
     ) -> Result<Painter, String> {
-        crate::profile_function!();
-        crate::check_for_gl_error_even_in_release!(&gl, "before Painter::new");
+        macros::profile_function!();
+        macros::check_for_gl_error_even_in_release!(&gl, "before Painter::new");
 
         let max_texture_side = unsafe { gl.get_parameter_i32(glow::MAX_TEXTURE_SIZE) } as usize;
 
@@ -218,7 +218,7 @@ impl Painter {
 
             let element_array_buffer = gl.create_buffer()?;
 
-            crate::check_for_gl_error_even_in_release!(&gl, "after Painter::new");
+            macros::check_for_gl_error_even_in_release!(&gl, "after Painter::new");
 
             Ok(Painter {
                 gl,
@@ -290,7 +290,7 @@ impl Painter {
 
         if !cfg!(target_arch = "wasm32") {
             self.gl.enable(glow::FRAMEBUFFER_SRGB);
-            check_for_gl_error!(&self.gl, "FRAMEBUFFER_SRGB");
+            macros::check_for_gl_error!(&self.gl, "FRAMEBUFFER_SRGB");
         }
 
         let width_in_points = width_in_pixels as f32 / pixels_per_point;
@@ -309,7 +309,7 @@ impl Painter {
         self.gl
             .bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(self.element_array_buffer));
 
-        check_for_gl_error!(&self.gl, "prepare_painting");
+        macros::check_for_gl_error!(&self.gl, "prepare_painting");
 
         (width_in_pixels, height_in_pixels)
     }
@@ -322,7 +322,7 @@ impl Painter {
         clipped_primitives: &[egui::ClippedPrimitive],
         textures_delta: &egui::TexturesDelta,
     ) {
-        crate::profile_function!();
+        macros::profile_function!();
         for (id, image_delta) in &textures_delta.set {
             self.set_texture(*id, image_delta);
         }
@@ -360,7 +360,7 @@ impl Painter {
         pixels_per_point: f32,
         clipped_primitives: &[egui::ClippedPrimitive],
     ) {
-        crate::profile_function!();
+        macros::profile_function!();
         self.assert_not_destroyed();
 
         if let Some(ref mut post_process) = self.post_process {
@@ -389,7 +389,7 @@ impl Painter {
                 }
                 Primitive::Callback(callback) => {
                     if callback.rect.is_positive() {
-                        crate::profile_scope!("callback");
+                        macros::profile_scope!("callback");
                         // Transform callback rect to physical pixels:
                         let rect_min_x = pixels_per_point * callback.rect.min.x;
                         let rect_min_y = pixels_per_point * callback.rect.min.y;
@@ -492,7 +492,7 @@ impl Painter {
     // ------------------------------------------------------------------------
 
     pub fn set_texture(&mut self, tex_id: egui::TextureId, delta: &egui::epaint::ImageDelta) {
-        crate::profile_function!();
+        macros::profile_function!();
 
         self.assert_not_destroyed();
 
@@ -692,7 +692,7 @@ impl Painter {
 }
 
 pub fn clear(gl: &glow::Context, screen_size_in_pixels: [u32; 2], clear_color: egui::Rgba) {
-    crate::profile_function!();
+    macros::profile_function!();
     unsafe {
         gl.disable(glow::SCISSOR_TEST);
 

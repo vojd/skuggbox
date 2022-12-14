@@ -1,4 +1,4 @@
-use crate::{check_for_gl_error, VERTEX_SHADER};
+use crate::VERTEX_SHADER;
 use egui::TextBuffer;
 use glow::{HasContext, Program, UniformLocation};
 use std::ffi::CString;
@@ -44,9 +44,9 @@ impl ShaderProgram {
     ) -> anyhow::Result<Program, String> {
         unsafe {
             let vert_shader = compile_shader(gl, glow::VERTEX_SHADER, VERTEX_SHADER.as_str())?;
-            check_for_gl_error!(gl, "vertex_shader_compile");
+            macros::check_for_gl_error!(gl, "vertex_shader_compile");
             let frag_shader = compile_shader(gl, glow::FRAGMENT_SHADER, fragment_src.as_str())?;
-            check_for_gl_error!(gl, "fragment_shader_compile");
+            macros::check_for_gl_error!(gl, "fragment_shader_compile");
 
             let shader_sources = vec![vert_shader, frag_shader];
             let program = link_program(gl, &shader_sources).unwrap();

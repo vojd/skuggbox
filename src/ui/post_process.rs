@@ -1,8 +1,8 @@
 #![allow(unsafe_code)]
-use crate::check_for_gl_error;
 use crate::ui::misc_util::{compile_shader, link_program};
 use crate::ui::vao::{BufferInfo, VertexArrayObject};
 use glow::HasContext as _;
+use macros::check_for_gl_error;
 
 /// Uses a framebuffer to render everything in linear color space and convert it back to `sRGB`
 /// in a separate "post processing" step
@@ -75,7 +75,7 @@ impl PostProcess {
             glow::UNSIGNED_BYTE,
             None,
         );
-        crate::check_for_gl_error_even_in_release!(&gl, "post process texture initialization");
+        macros::check_for_gl_error_even_in_release!(&gl, "post process texture initialization");
 
         gl.framebuffer_texture_2d(
             glow::FRAMEBUFFER,
@@ -158,7 +158,7 @@ impl PostProcess {
         gl.buffer_data_u8_slice(glow::ELEMENT_ARRAY_BUFFER, &indices, glow::STATIC_DRAW);
 
         gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, None);
-        crate::check_for_gl_error_even_in_release!(&gl, "post process initialization");
+        macros::check_for_gl_error_even_in_release!(&gl, "post process initialization");
 
         Ok(PostProcess {
             gl,
