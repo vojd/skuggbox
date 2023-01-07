@@ -5,8 +5,9 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::{
-    handle_actions, handle_events, Action, AppState, AppWindow, Config, PlayMode, ShaderService, Ui,
+    handle_actions, handle_events, Action, AppState, AppWindow, Config, PlayMode, ShaderService,
 };
+use ui::Ui;
 
 pub struct App {
     pub event_loop: EventLoop<()>,

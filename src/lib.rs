@@ -12,7 +12,6 @@ pub mod render;
 pub mod shader;
 pub mod state;
 pub mod timer;
-pub mod ui;
 pub mod utils;
 pub mod window;
 
@@ -27,7 +26,6 @@ pub use render::*;
 pub use shader::*;
 pub use state::*;
 pub use timer::*;
-pub use ui::*;
 pub use uniforms::*;
 pub use utils::*;
 pub use window::*;

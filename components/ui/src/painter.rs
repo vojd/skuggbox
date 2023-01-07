@@ -1,5 +1,6 @@
 #![allow(unsafe_code)]
 
+use bytemuck::offset_of;
 use std::{collections::HashMap, sync::Arc};
 
 use egui::{
@@ -7,14 +8,13 @@ use egui::{
     epaint::{Color32, Mesh, PaintCallbackInfo, Primitive, Vertex},
 };
 use glow::HasContext as _;
-use memoffset::offset_of;
 
-use crate::ui::post_process::PostProcess;
+use crate::post_process::PostProcess;
 
-use crate::ui::misc_util::{compile_shader, link_program};
-use crate::ui::shader_version::ShaderVersion;
-use crate::ui::vao;
-use crate::ui::vao::VertexArrayObject;
+use crate::misc_util::{compile_shader, link_program};
+use crate::shader_version::ShaderVersion;
+use crate::vao;
+use crate::vao::VertexArrayObject;
 pub use glow::Context;
 use macros::check_for_gl_error;
 

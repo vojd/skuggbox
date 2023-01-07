@@ -5,8 +5,9 @@ use winit::{
 
 use crate::{
     state::{AppState, PlayMode},
-    Action, Ui, WindowEventHandler,
+    Action, WindowEventHandler,
 };
+use ui::Ui;
 
 pub fn handle_events<T>(
     event: &Event<'_, T>,

@@ -1,6 +1,6 @@
 #![allow(unsafe_code)]
-use crate::ui::misc_util::{compile_shader, link_program};
-use crate::ui::vao::{BufferInfo, VertexArrayObject};
+use crate::misc_util::{compile_shader, link_program};
+use crate::vao::{BufferInfo, VertexArrayObject};
 use glow::HasContext as _;
 use macros::check_for_gl_error;
 
@@ -10,7 +10,7 @@ pub(crate) struct PostProcess {
     gl: std::sync::Arc<glow::Context>,
     pos_buffer: glow::Buffer,
     index_buffer: glow::Buffer,
-    vao: VertexArrayObject,
+    vao: crate::vao::VertexArrayObject,
     is_webgl_1: bool,
     color_texture: glow::Texture,
     depth_renderbuffer: Option<glow::Renderbuffer>,
