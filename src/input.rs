@@ -68,6 +68,8 @@ pub fn handle_events<T>(
                                 // UI controls
                                 VirtualKeyCode::Tab => actions.push(Action::UIToggleVisible),
                                 VirtualKeyCode::F11 => actions.push(Action::ToggleFullscreen),
+
+                                VirtualKeyCode::P => actions.push(Action::PrintSource),
                                 _ => {}
                             }
                         }

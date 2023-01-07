@@ -21,7 +21,7 @@ pub struct ShaderContent {
     pub shader_id: String,
     pub main_shader_path: PathBuf,
     pub parts: BTreeMap<PathBuf, Part>,
-    // contains the final shader
+    /// contains the final shader after it's been pre-processed
     pub shader_src: String,
     pub ready_to_compile: bool,
 }

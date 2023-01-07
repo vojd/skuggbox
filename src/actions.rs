@@ -1,5 +1,5 @@
 use crate::camera::OrbitCamera;
-use crate::{seek, AppState, PlayMode, PlaybackControl, ShaderService};
+use crate::{seek, AppState, PlayMode, PlaybackControl, PreProcessorConfig, ShaderService};
 use glam::Vec2;
 use winit::event_loop::ControlFlow;
 
@@ -19,6 +19,7 @@ pub enum Action {
     UIToggleVisible,
     ToggleFullscreen,
     Screenshot,
+    PrintSource,
 }
 
 pub fn handle_actions(
@@ -74,7 +75,9 @@ pub fn handle_actions(
                     if !shader_service.use_camera_integration {
                         log::info!("Enabling camera integration. Please use '#pragma skuggbox(camera)' in your shader");
                         shader_service.use_camera_integration = true;
-                        shader_service.reload();
+                        shader_service.reload(PreProcessorConfig {
+                            use_camera_integration: true,
+                        });
                         //.expect("Expected successful shader reload");
                     }
                 }
@@ -82,7 +85,9 @@ pub fn handle_actions(
                     if shader_service.use_camera_integration {
                         log::info!("Disabling camera integration");
                         shader_service.use_camera_integration = false;
-                        shader_service.reload();
+                        shader_service.reload(PreProcessorConfig {
+                            use_camera_integration: false,
+                        });
                         //.expect("Expected successful shader reload");
                     }
                 }
@@ -99,6 +104,9 @@ pub fn handle_actions(
             }
             Action::Screenshot => {
                 log::debug!("Take screenshot. To be implemented.");
+            }
+            Action::PrintSource => {
+                shader_service.source();
             }
         }
     }

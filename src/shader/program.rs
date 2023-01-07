@@ -38,6 +38,7 @@ pub struct ShaderUniformLocations {
     pub time: Option<UniformLocation>,
     pub time_delta: Option<UniformLocation>,
     pub mouse: Option<UniformLocation>,
+    pub sb_camera_transform: Option<UniformLocation>,
 }
 
 #[derive(Clone)]
@@ -81,12 +82,14 @@ impl ShaderProgram {
         let resolution = gl.get_uniform_location(program, "iResolution");
         let time_delta = gl.get_uniform_location(program, "iTimeDelta");
         let mouse = gl.get_uniform_location(program, "iMouse");
+        let sb_camera_transform = gl.get_uniform_location(program, "sbCameraTransform");
 
         let locations = ShaderUniformLocations {
             resolution,
             time,
             time_delta,
             mouse,
+            sb_camera_transform,
         };
 
         log::debug!("shader locations {:?}", locations);

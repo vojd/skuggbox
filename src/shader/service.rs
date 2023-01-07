@@ -27,7 +27,6 @@ impl ShaderService {
         };
 
         let pre_processor = PreProcessor::new(pre_processor_config);
-        log::info!("pre processor done");
         let shaders = SkuggboxShader::from_files(gl, &pre_processor, shader_files);
 
         Self {
@@ -92,21 +91,23 @@ impl ShaderService {
                     }
                 }
             }
-
-            // if shader.try_to_compile() {
-            //     // Hurray! The shader was compiled
-            //     log::debug!("Shader compiled");
-            //     shader.find_shader_uniforms(gl);
-            // }
         }
         Ok(())
     }
 
     /// Reloading re-constructs all shaders.
-    pub fn reload(&mut self) {
+    pub fn reload(&mut self, config: PreProcessorConfig) {
+        self.pre_processor.config = config;
         for shader in self.shaders.iter_mut() {
             let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
             shader.mark_for_recompilation(reloaded_shader);
+        }
+    }
+
+    pub fn source(&self) {
+        for shader in &self.shaders {
+            log::info!("{}", shader.content.shader_id);
+            log::info!("{}", shader.content.shader_src);
         }
     }
 }

@@ -93,6 +93,14 @@ impl App {
                             if ui.button("⏩").clicked() {
                                 actions.push(Action::TimeForward(1.0))
                             }
+
+                            ui.spacing();
+                            // show camera mode
+                            let cam_mode_str = match shader_service.use_camera_integration {
+                                true => "dev cam",
+                                false => "shader cam",
+                            };
+                            ui.label(format!("Camera mode: {}", cam_mode_str));
                         });
                     });
 
@@ -172,6 +180,12 @@ fn render(
 
                 gl.uniform_4_f32(Some(&mouse), x, y, left_mouse, right_mouse);
             };
+
+            if let Some(sb_camera_transform) = shader.locations.sb_camera_transform {
+                let camera = state.camera.calculate_uniform_data();
+                let f32_arr = camera.to_cols_array();
+                gl.uniform_matrix_4_f32_slice(Some(&sb_camera_transform), false, &f32_arr);
+            }
 
             // actually render
             gl.clear(glow::COLOR_BUFFER_BIT);

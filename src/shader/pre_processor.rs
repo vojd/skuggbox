@@ -1,4 +1,4 @@
-use crate::{Part, ShaderContent};
+use crate::{Part, ShaderContent, SKUGGBOX_CAMERA};
 use std::collections::HashSet;
 /// Utility functions to read shader content
 /// and produce the necessary pieces to construct a
@@ -89,6 +89,8 @@ impl PreProcessor {
         let shader_source =
             self.process_includes(shader, loaded_files, &shader_path, file_contents);
 
+        let shader_source = self.process_integrations(shader_source);
+
         Ok(Part {
             shader_path,
             shader_src: shader_source,
@@ -115,6 +117,7 @@ impl PreProcessor {
                 let path = base_dir.join(shader_name);
 
                 if loaded_files.contains(&path) {
+                    // TODO(mathias): Output this error in the UI
                     log::warn!("multiple includes of shader: {:?}", path);
                     return format!("// {}", line);
                 }
@@ -125,6 +128,7 @@ impl PreProcessor {
                         shader.parts.insert(path, part);
                         source
                     }
+                    // TODO(mathias): Output this error in the UI
                     Err(e) => {
                         log::warn!("failed to load file: {:?}: {:?}", path, e);
                         format!("// {}", line)
@@ -134,6 +138,24 @@ impl PreProcessor {
             .collect();
 
         blocks.join("\n")
+    }
+
+    pub fn process_integrations(&self, source: String) -> String {
+        let src = source
+            .lines()
+            .map(|line| {
+                if self.config.use_camera_integration
+                    && line.trim().contains("#pragma skuggbox(camera)")
+                {
+                    log::info!("Found camera integration in shader code");
+                    return "#define USE_SKUGGBOX_CAMERA\n".to_string() + SKUGGBOX_CAMERA;
+                }
+                line.to_string()
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        src
     }
 }
 
