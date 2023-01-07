@@ -1,5 +1,5 @@
 use crate::camera::{CameraModel, OrbitCamera};
-use crate::{Mouse, Timer};
+use crate::{Mouse, ShaderError, Timer};
 use serde::{Deserialize, Serialize};
 
 pub struct AppState {
@@ -16,6 +16,7 @@ pub struct AppState {
     pub ui_visible: bool,
     pub is_fullscreen: bool,
     pub camera: Box<dyn CameraModel>,
+    pub shader_error: Option<ShaderError>,
 }
 
 impl Default for AppState {
@@ -32,6 +33,7 @@ impl Default for AppState {
             ui_visible: true,
             is_fullscreen: false,
             camera: Box::from(OrbitCamera::default()),
+            shader_error: None,
         }
     }
 }

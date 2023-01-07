@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::thread;
 
 use crate::shader::PreProcessor;
-use crate::{PreProcessorConfig, SkuggboxShader};
+use crate::{PreProcessorConfig, ShaderError, SkuggboxShader};
 
 /// The ShaderService handles the inputted shader files, constructs an OpenGL compatible shader
 /// as well as builds up a pre-processor for inlining include files etc.
@@ -17,6 +17,7 @@ pub struct ShaderService {
     /// Two way channels for listening and reacting to changes in our shader files
     pre_processor: PreProcessor,
     receiver: Option<Receiver<PathBuf>>,
+    pub last_error: Option<ShaderError>,
 }
 
 impl ShaderService {
@@ -34,6 +35,7 @@ impl ShaderService {
             shaders,
             use_camera_integration: false,
             receiver: None,
+            last_error: None,
         }
     }
 
@@ -57,7 +59,7 @@ impl ShaderService {
     /// This method should be called from the GL-thread.
     /// It is basically the same as watching for file changes and the
     /// reload the shaders whenever that happens.
-    pub fn run(&mut self, gl: &glow::Context) {
+    pub fn run(&mut self, gl: &glow::Context) -> Result<(), ShaderError> {
         // pull file updates from the channel
         if let Some(recv) = &self.receiver {
             let value = recv.try_recv();
@@ -77,12 +79,27 @@ impl ShaderService {
         };
 
         for shader in self.shaders.iter_mut() {
-            if shader.try_to_compile() {
-                // Hurray! The shader was compiled
-                log::debug!("Shader compiled");
-                shader.find_shader_uniforms(gl);
+            if shader.ready_to_compile {
+                match shader.try_to_compile() {
+                    Ok(_) => {
+                        log::debug!("Shader compiled");
+                        shader.find_shader_uniforms(gl);
+                        self.last_error = None;
+                    }
+                    Err(e) => {
+                        self.last_error = Some(e.clone());
+                        return Err(e);
+                    }
+                }
             }
+
+            // if shader.try_to_compile() {
+            //     // Hurray! The shader was compiled
+            //     log::debug!("Shader compiled");
+            //     shader.find_shader_uniforms(gl);
+            // }
         }
+        Ok(())
     }
 
     /// Reloading re-constructs all shaders.

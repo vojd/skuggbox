@@ -1,4 +1,4 @@
-use crate::{PreProcessor, ShaderProgram, ShaderUniformLocations};
+use crate::{PreProcessor, ShaderError, ShaderProgram, ShaderUniformLocations};
 use glow::Program;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -82,9 +82,9 @@ impl SkuggboxShader {
     }
 
     /// Attempt to recompile the shader. Returns true if the shader was recompiled.
-    pub fn try_to_compile(&mut self) -> bool {
+    pub fn try_to_compile(&mut self) -> Result<(), ShaderError> {
         if !self.ready_to_compile {
-            return false;
+            return Ok(());
         }
 
         // TODO(mathias): Free / delete the old programs
@@ -94,11 +94,11 @@ impl SkuggboxShader {
         match ShaderProgram::from_frag_src(&self.gl, self.content.shader_src.clone()) {
             Ok(program) => {
                 self.program = Some(program);
-                true
+                Ok(())
             }
             Err(err) => {
                 log::warn!("{:?}", err);
-                false
+                Err(ShaderError::CompilationError { error: err })
             }
         }
     }

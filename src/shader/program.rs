@@ -2,6 +2,7 @@ use crate::VERTEX_SHADER;
 use egui::TextBuffer;
 use glow::{HasContext, Program, UniformLocation};
 use std::ffi::CString;
+use std::fmt::Formatter;
 
 pub fn cstr_with_len(len: usize) -> CString {
     let mut buffer: Vec<u8> = Vec::with_capacity(len + 1);
@@ -13,7 +14,7 @@ pub fn cstr_to_str(cstr: &CString) -> String {
     cstr.to_string_lossy().to_string()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ShaderError {
     CompilationError { error: String },
     FileError { error: String },
@@ -24,6 +25,13 @@ impl From<String> for ShaderError {
         ShaderError::CompilationError { error: err }
     }
 }
+
+impl std::fmt::Display for ShaderError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Clone, Default, Debug)]
 pub struct ShaderUniformLocations {
     pub resolution: Option<UniformLocation>,
@@ -72,7 +80,7 @@ impl ShaderProgram {
         let time = gl.get_uniform_location(program, "iTime");
         let resolution = gl.get_uniform_location(program, "iResolution");
         let time_delta = gl.get_uniform_location(program, "iTimeDelta");
-        let mouse = gl.get_uniform_location(program, "iResolution");
+        let mouse = gl.get_uniform_location(program, "iMouse");
 
         let locations = ShaderUniformLocations {
             resolution,

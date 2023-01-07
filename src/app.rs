@@ -44,7 +44,7 @@ impl App {
         log::debug!("Shader files: {:?}", shader_files);
         let mut shader_service = ShaderService::new(gl.clone(), shader_files);
         shader_service.watch();
-        shader_service.run(gl);
+        let _ = shader_service.run(gl);
 
         let vertex_array = unsafe {
             gl.create_vertex_array()
@@ -52,7 +52,13 @@ impl App {
         };
 
         while app_state.is_running {
-            shader_service.run(gl);
+            let _ = shader_service.run(gl);
+            app_state.shader_error = shader_service.last_error.clone();
+
+            // force UI open if we have a shader error
+            if app_state.shader_error.is_some() {
+                app_state.ui_visible = true;
+            }
 
             if matches!(app_state.play_mode, PlayMode::Playing) {
                 app_state.timer.start();
@@ -89,6 +95,22 @@ impl App {
                             }
                         });
                     });
+
+                    if let Some(error) = &app_state.shader_error {
+                        let mut error = format!("{}", error);
+                        egui::TopBottomPanel::bottom("view_bottom").show(egui_ctx, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.add(
+                                    egui::TextEdit::multiline(&mut error)
+                                        .font(egui::TextStyle::Monospace)
+                                        .code_editor()
+                                        .desired_rows(4)
+                                        .desired_width(f32::INFINITY)
+                                        .lock_focus(true),
+                                )
+                            });
+                        });
+                    }
                 });
 
                 handle_events(&event, control_flow, &mut ui, app_state, &mut actions);
