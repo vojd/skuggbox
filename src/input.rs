@@ -1,3 +1,4 @@
+use ui_backend::Ui;
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,
@@ -7,7 +8,6 @@ use crate::{
     state::{AppState, PlayMode},
     Action, WindowEventHandler,
 };
-use ui::Ui;
 
 pub fn handle_events<T>(
     event: &Event<'_, T>,

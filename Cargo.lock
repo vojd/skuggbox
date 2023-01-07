@@ -1678,7 +1678,7 @@ dependencies = [
  "serde",
  "simple_logger",
  "tracing",
- "ui",
+ "ui-backend",
  "which",
  "winit",
 ]
@@ -1881,7 +1881,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "375812fa44dab6df41c195cd2f7fecb488f6c09fbaafb62807488cefab642bff"
 
 [[package]]
-name = "ui"
+name = "ui-backend"
 version = "0.1.0"
 dependencies = [
  "bytemuck",

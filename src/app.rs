@@ -5,9 +5,10 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::{
-    handle_actions, handle_events, Action, AppState, AppWindow, Config, PlayMode, ShaderService,
+    handle_actions, handle_events, top_bar, Action, AppState, AppWindow, Config, PlayMode,
+    ShaderService,
 };
-use ui::Ui;
+use ui_backend::Ui;
 
 pub struct App {
     pub event_loop: EventLoop<()>,
@@ -72,37 +73,7 @@ impl App {
 
                 let _repaint_after = ui.run(app_window.window_context.window(), |egui_ctx| {
                     egui::TopBottomPanel::top("view_top").show(egui_ctx, |ui| {
-                        ui.horizontal(|ui| {
-                            if ui.button("⏹").clicked() {
-                                actions.push(Action::TogglePlayPause);
-                                actions.push(Action::TimeStop);
-                            }
-                            // rewind
-                            if ui.button("⏪").clicked() {
-                                actions.push(Action::TimeRewind(1.0))
-                            }
-                            // play/pause
-                            let play_mode_label = match app_state.play_mode {
-                                PlayMode::Playing => "⏸",
-                                PlayMode::Paused => "▶",
-                            };
-                            if ui.button(play_mode_label).clicked() {
-                                actions.push(Action::TogglePlayPause)
-                            }
-
-                            // fast forward
-                            if ui.button("⏩").clicked() {
-                                actions.push(Action::TimeForward(1.0))
-                            }
-
-                            ui.spacing();
-                            // show camera mode
-                            let cam_mode_str = match shader_service.use_camera_integration {
-                                true => "dev cam",
-                                false => "shader cam",
-                            };
-                            ui.label(format!("Camera mode: {}", cam_mode_str));
-                        });
+                        top_bar(ui, app_state, &mut actions, &shader_service);
                     });
 
                     if let Some(error) = &app_state.shader_error {
