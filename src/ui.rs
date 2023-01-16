@@ -41,11 +41,11 @@ pub fn top_bar(
 
 pub fn left_pane(
     ui: &mut egui::Ui,
-    app_state: &mut AppState,
-    actions: &mut Vec<Action>,
-    shader_service: &ShaderService,
+    _app_state: &mut AppState,
+    _actions: &mut [Action],
+    _shader_service: &ShaderService,
 ) {
     ui.vertical(|ui| {
-        ui.label("something");
+        ui.label("left pane");
     });
 }

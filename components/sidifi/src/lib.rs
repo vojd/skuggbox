@@ -1,33 +1,31 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::fmt::{format, Display, Formatter};
 use uuid::Uuid;
 
 use crate::glsl::{op_union, sd_box_to_code, translate};
-use glam::{Vec3, Vec4};
+use glam::Vec3;
 
-mod errors;
-mod glsl;
+pub mod errors;
+pub mod glsl;
 
 #[derive(Debug, Clone)]
-enum Primitive {
+pub enum Primitive {
     Box(Vec3),
 }
 
 /// Domain operations such as union, chamfer, etc
 #[derive(Debug, Clone)]
-enum Op {
+pub enum Combination {
     Union,
 }
 
 #[derive(Debug, Clone)]
-enum Transform {
+pub enum Transform {
     Translate(Vec3),
 }
 
 #[derive(Debug, Clone)]
-enum Ope {
+pub enum Op {
     Root,
-    Combine(Op),
+    Combination(Combination),
     Transform(Transform),
     Primitive(Primitive),
 }
@@ -37,26 +35,20 @@ type NodeId = Uuid;
 /// A node in the SDF tree
 /// Either a primitive or an op
 #[derive(Debug, Clone)]
-struct Node {
-    id: NodeId,
-
-    ope: Ope,
-    primitive: Option<Primitive>,
-    op: Option<Op>,
-    parent_id: Option<NodeId>,
-    children_ids: Vec<NodeId>,
-    children: Vec<Node>,
+pub struct Node {
+    pub id: NodeId,
+    pub op: Op,
+    /// TODO(mathias): might not need this
+    pub parent_id: Option<NodeId>,
+    pub children: Vec<Node>,
 }
 
 impl Node {
     pub fn new_root() -> Self {
         Self {
             id: NodeId::new_v4(),
-            ope: Ope::Root,
-            primitive: None,
-            op: None,
+            op: Op::Root,
             parent_id: None,
-            children_ids: vec![],
             children: vec![],
         }
     }
@@ -64,23 +56,17 @@ impl Node {
     pub fn from_primitive(primitive: Primitive) -> Self {
         Self {
             id: NodeId::new_v4(),
-            ope: Ope::Primitive(primitive.clone()),
-            primitive: Some(primitive),
-            op: None,
+            op: Op::Primitive(primitive),
             parent_id: None,
-            children_ids: vec![],
             children: vec![],
         }
     }
 
-    pub fn from_op(op: Op) -> Self {
+    pub fn from_op(op: Combination) -> Self {
         Self {
             id: NodeId::new_v4(),
-            ope: Ope::Combine(op.clone()),
-            primitive: None,
-            op: Some(op),
+            op: Op::Combination(op),
             parent_id: None,
-            children_ids: vec![],
             children: vec![],
         }
     }
@@ -88,11 +74,8 @@ impl Node {
     pub fn from_transform(transform: Transform) -> Self {
         Self {
             id: Default::default(),
-            ope: Ope::Transform(transform),
-            primitive: None,
-            op: None,
+            op: Op::Transform(transform),
             parent_id: None,
-            children_ids: vec![],
             children: vec![],
         }
     }
@@ -104,8 +87,8 @@ impl Node {
     }
 
     pub fn to_code(&self) -> String {
-        match &self.ope {
-            Ope::Root => {
+        match &self.op {
+            Op::Root => {
                 // TODO(mathias): Traverse all children nodes and replace all placeholders
                 self.children
                     .iter()
@@ -113,16 +96,16 @@ impl Node {
                     .collect::<Vec<String>>()
                     .join("")
             }
-            Ope::Combine(op) => match op {
-                Op::Union => {
+            Op::Combination(op) => match op {
+                Combination::Union => {
                     let node_a = self.children.get(0).expect("union needs two children");
                     let node_b = self.children.get(1).expect("union needs two children");
                     op_union(node_a, node_b)
                 }
             },
-            /// Ideally a transform node should only have one child.
-            /// This code does not account for more than one child at this point in time.
-            Ope::Transform(transform) => match transform {
+            // Ideally a transform node should only have one child.
+            // This code does not account for more than one child at this point in time.
+            Op::Transform(transform) => match transform {
                 // TODO(mathias): Return error if the transform doesn't have a child
                 Transform::Translate(vec4) => self
                     .children
@@ -135,7 +118,7 @@ impl Node {
                     .collect::<Vec<String>>()
                     .join(""),
             },
-            Ope::Primitive(primitive) => match primitive {
+            Op::Primitive(primitive) => match primitive {
                 Primitive::Box(size) => sd_box_to_code(size),
             },
         }
@@ -210,8 +193,8 @@ mod tests {
         let mut root = Node::new_root();
         let translate_a = Node::from_transform(Transform::Translate(pos_vec3));
         let mut translate_b = Node::from_transform(Transform::Translate(pos_vec3));
-        let mut union_a = Node::from_op(Op::Union);
-        let mut union_b = Node::from_op(Op::Union);
+        let mut union_a = Node::from_op(Combination::Union);
+        let mut union_b = Node::from_op(Combination::Union);
         let box_a = Node::from_primitive(Primitive::Box(size_vec3));
         let box_b = Node::from_primitive(Primitive::Box(size_vec3));
         let box_c = Node::from_primitive(Primitive::Box(size_vec3));
@@ -233,7 +216,7 @@ mod tests {
 
     #[test]
     fn combination_union_to_code() {
-        let mut op = Node::from_op(Op::Union);
+        let mut op = Node::from_op(Combination::Union);
 
         let vec3 = Vec3::new(1.1, 1.2, 1.3);
         let node_a = Node::from_primitive(Primitive::Box(vec3));
@@ -252,7 +235,7 @@ mod tests {
     #[test]
     fn node_tree_parents() {
         let root = Node::new_root();
-        let mut op = Node::from_op(Op::Union);
+        let mut op = Node::from_op(Combination::Union);
 
         let vec3 = Vec3::new(1.1, 1.2, 1.3);
         let node_a = Node::from_primitive(Primitive::Box(vec3));
