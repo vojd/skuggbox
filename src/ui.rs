@@ -38,3 +38,14 @@ pub fn top_bar(
         ui.label(format!("Camera mode: {}", cam_mode_str));
     });
 }
+
+pub fn left_pane(
+    ui: &mut egui::Ui,
+    app_state: &mut AppState,
+    actions: &mut Vec<Action>,
+    shader_service: &ShaderService,
+) {
+    ui.vertical(|ui| {
+        ui.label("something");
+    });
+}

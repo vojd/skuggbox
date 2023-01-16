@@ -5,8 +5,8 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::{
-    handle_actions, handle_events, top_bar, Action, AppState, AppWindow, Config, PlayMode,
-    ShaderService,
+    handle_actions, handle_events, left_pane, top_bar, Action, AppState, AppWindow, Config,
+    PlayMode, ShaderService,
 };
 use ui_backend::Ui;
 
@@ -91,6 +91,10 @@ impl App {
                             });
                         });
                     }
+
+                    egui::SidePanel::left("left_pane").show(egui_ctx, |ui| {
+                        left_pane(ui, app_state, &mut actions, &shader_service);
+                    });
                 });
 
                 handle_events(&event, control_flow, &mut ui, app_state, &mut actions);

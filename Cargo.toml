@@ -35,3 +35,4 @@ clap = "^3.0.0-beta.4"
 winit = "0.27"
 which = "4.2.2" # Used for locating minime-preprocess
 ui-backend = { path = "components/ui-backend", version = "0.1.0" }
+sidifi = { path = "components/sidifi", version = "0.1"}
