@@ -6,7 +6,7 @@ use winit::{
 
 use crate::{
     state::{AppState, PlayMode},
-    Action, WindowEventHandler,
+    Action, ActionModifier, WindowEventHandler,
 };
 
 pub fn handle_events<T>(
@@ -30,6 +30,17 @@ pub fn handle_events<T>(
                 WindowEvent::Resized(size) => {
                     let size = size.to_logical::<i32>(1.0);
                     actions.push(Action::WindowResize((size.width, size.height)))
+                }
+
+                WindowEvent::ModifiersChanged(modifier_state) => {
+                    let internal =
+                        i32::from(modifier_state.shift()) + 2 * i32::from(modifier_state.ctrl());
+                    app_state.modifier = match internal {
+                        1 => ActionModifier::Slow,
+                        2 => ActionModifier::Fast,
+                        3 => ActionModifier::SuperSlow,
+                        _ => ActionModifier::Normal,
+                    }
                 }
 
                 WindowEvent::KeyboardInput { input, .. } => {

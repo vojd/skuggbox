@@ -11,6 +11,7 @@ pub struct AppState {
     pub delta_time: f32,
     pub playback_time: f32,
     pub mouse: Mouse,
+    pub modifier: ActionModifier,
     /// Running or paused?
     pub play_mode: PlayMode,
     pub ui_visible: bool,
@@ -29,6 +30,7 @@ impl Default for AppState {
             delta_time: 0.0,
             playback_time: 0.0,
             mouse: Mouse::default(),
+            modifier: ActionModifier::Normal,
             play_mode: PlayMode::Playing,
             ui_visible: true,
             is_fullscreen: false,
@@ -37,6 +39,15 @@ impl Default for AppState {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ActionModifier {
+    SuperSlow, // shift + ctrl
+    Slow,      // shift
+    Normal,
+    Fast, // ctrl
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PlayMode {
     Playing,
@@ -55,10 +66,21 @@ pub enum PlaybackControl {
     Stop,
 }
 
-pub fn seek(playback_time: f32, playback_control: PlaybackControl) -> f32 {
+pub fn seek(
+    playback_time: f32,
+    modifier: &ActionModifier,
+    playback_control: PlaybackControl,
+) -> f32 {
+    let factor = match modifier {
+        ActionModifier::SuperSlow => 0.01,
+        ActionModifier::Slow => 0.1,
+        ActionModifier::Normal => 1.0,
+        ActionModifier::Fast => 10.0,
+    };
+
     match playback_control {
-        PlaybackControl::Forward(t) => playback_time + t,
-        PlaybackControl::Rewind(t) => playback_time - t,
+        PlaybackControl::Forward(t) => playback_time + t * factor,
+        PlaybackControl::Rewind(t) => f32::max(playback_time - t * factor, 0.0),
         PlaybackControl::Stop => 0.0,
     }
 }

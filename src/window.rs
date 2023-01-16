@@ -20,12 +20,16 @@ impl AppWindow {
             ));
 
         let window_context = unsafe {
-            glutin::ContextBuilder::new()
+            match glutin::ContextBuilder::new()
                 .with_vsync(true)
                 .build_windowed(window_builder, &event_loop)
-                .unwrap()
-                .make_current()
-                .unwrap()
+            {
+                Ok(ctx) => ctx.make_current().unwrap(),
+                Err(creation_error) => {
+                    eprintln!("Context creation failed with error: {}", creation_error);
+                    panic!("Error creating context")
+                }
+            }
         };
         let gl = unsafe {
             glow::Context::from_loader_function(|s| window_context.get_proc_address(s) as *const _)

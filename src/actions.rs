@@ -43,7 +43,11 @@ pub fn handle_actions(
                 app_state.play_mode = PlayMode::Paused;
             }
             Action::TimeStop => {
-                app_state.playback_time = seek(app_state.playback_time, PlaybackControl::Stop)
+                app_state.playback_time = seek(
+                    app_state.playback_time,
+                    &app_state.modifier,
+                    PlaybackControl::Stop,
+                )
             }
             Action::TogglePlayPause => match app_state.play_mode {
                 PlayMode::Playing => {
@@ -57,12 +61,18 @@ pub fn handle_actions(
                 }
             },
             Action::TimeForward(time) => {
-                app_state.playback_time =
-                    seek(app_state.playback_time, PlaybackControl::Forward(time))
+                app_state.playback_time = seek(
+                    app_state.playback_time,
+                    &app_state.modifier,
+                    PlaybackControl::Forward(time),
+                )
             }
             Action::TimeRewind(time) => {
-                app_state.playback_time =
-                    seek(app_state.playback_time, PlaybackControl::Rewind(time))
+                app_state.playback_time = seek(
+                    app_state.playback_time,
+                    &app_state.modifier,
+                    PlaybackControl::Rewind(time),
+                )
             }
             Action::WindowClose => {}
             Action::WindowResize((width, height)) => {

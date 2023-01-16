@@ -7,6 +7,11 @@ pub fn top_bar(
     shader_service: &ShaderService,
 ) {
     ui.horizontal(|ui| {
+        // show the current time / beat
+        // TODO: Change "time" to "beat" when we can switch timing mode
+        let time = format!("time: {:6.2}", app_state.playback_time);
+        ui.label(time);
+
         if ui.button("⏹").clicked() {
             actions.push(Action::TogglePlayPause);
             actions.push(Action::TimeStop);
