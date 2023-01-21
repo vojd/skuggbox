@@ -123,9 +123,7 @@ void main() {
 
     #ifdef USE_SKUGGBOX_CAMERA
     skuggbox_camera(uv, ro, rd);
-    #endif
-
-    #ifndef USE_SKUGGBOX_CAMERA
+    #else
     mat3 rot = rotationXY((vec2(-mouseDir.x, -mouseDir.y) - iResolution.xy * 0.5).yx * vec2(0.01, -0.01));
     ro = rot * ro;
     rd = rot * rd;
