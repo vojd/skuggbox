@@ -1,5 +1,5 @@
-use glam::Vec2;
-use winit::event::{ElementState, MouseButton, WindowEvent};
+use glam::{Vec2, Vec3};
+use winit::event::{ElementState, MouseButton, MouseScrollDelta, WindowEvent};
 
 use crate::event::WindowEventHandler;
 
@@ -12,7 +12,13 @@ pub struct Mouse {
     /// Useful for when you want to rotate the camera based on the mouse direction
     /// and avoid camera jumps when cursor enters far from the previous hit.
     /// Remember to scale this value in the shader to fit your liking.
-    pub dir: Vec2,
+    ///
+    /// There is also the `Camera` and its `sb_camera_transform` which you should use
+    /// for a pre-made camera which injects into the shader.
+    /// x: horizontal rotation
+    /// y: vertical rotation
+    /// z: zoom level
+    pub dir: Vec3,
 
     pub is_lmb_down: bool,
     pub is_mmb_down: bool,
@@ -27,7 +33,7 @@ impl Default for Mouse {
             last_pos: Vec2::ZERO,
             delta: Vec2::new(0.0, 0.0),
 
-            dir: Vec2::default(),
+            dir: Vec3::default(),
             is_lmb_down: false,
             is_mmb_down: false,
             is_rmb_down: false,
@@ -54,7 +60,9 @@ impl WindowEventHandler for Mouse {
 
                     self.pos = Vec2::new(position.x as f32, position.y as f32);
 
-                    self.dir += vec_to_dir(self.delta);
+                    let v = vec2_to_dir(self.delta);
+                    self.dir.x += v.x;
+                    self.dir.y += v.y;
                 }
                 true
             }
@@ -72,6 +80,14 @@ impl WindowEventHandler for Mouse {
                 true
             }
 
+            WindowEvent::MouseWheel { delta, .. } => {
+                self.dir.z -= match delta {
+                    MouseScrollDelta::LineDelta(_, y) => *y,
+                    MouseScrollDelta::PixelDelta(pos) => pos.y as f32,
+                };
+                true
+            }
+
             _ => false,
         }
     }
@@ -79,7 +95,7 @@ impl WindowEventHandler for Mouse {
 
 /// Simply return a numerical direction in -1, 0 and 1 on which direction on the number line
 /// the value points
-fn vec_to_dir(v: Vec2) -> Vec2 {
+fn vec2_to_dir(v: Vec2) -> Vec2 {
     Vec2::new(
         if v.x < 0. {
             -1.0

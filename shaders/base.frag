@@ -8,7 +8,7 @@ uniform float iTime;
 uniform vec2 iResolution;
 // mx, my, zoom_level
 uniform vec4 iMouse;
-uniform vec2 iMouseDir;
+uniform vec3 iMouseDir;
 
 uniform vec3 iCamPos;
 
@@ -79,14 +79,13 @@ vec3 palette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
 
 vec3 bg(vec3 ro, vec3 rd) {
     vec3 col = 0.1 + (
-    palette(clamp((random(rd.xz + sin(iTime * 0.1)) * 0.5 + 0.5) * 0.035 - rd.y * 0.5 + 0.35, -1.0, 1.0)
-    , vec3(0.5, 0.45, 0.55)
-    , vec3(0.5, 0.5, 0.5)
-    , vec3(1.05, 1.0, 1.0)
-    , vec3(0.275, 0.2, 0.19)
-    )
+        palette(clamp((random(rd.xz + sin(iTime * 0.1)) * 0.5 + 0.5) * 0.035 - rd.y * 0.5 + 0.35, -1.0, 1.0)
+        , vec3(0.5, 0.45, 0.55)
+        , vec3(0.5, 0.5, 0.5)
+        , vec3(1.05, 1.0, 1.0)
+        , vec3(0.275, 0.2, 0.19)
+        )
     );
-
 
     float t = intersectPlane(ro, rd, vec3(0, 1, 0), 0.5);
 
@@ -107,27 +106,29 @@ vec3 bg(vec3 ro, vec3 rd) {
 mat3 rotationXY(vec2 angle) {
     vec2 c = cos(angle);
     vec2 s = sin(angle);
-
     return mat3(
-        c.y      ,  0.0, -s.y,
-        s.y * s.x,  c.x,  c.y * s.x,
-        s.y * c.x, -s.x,  c.y * c.x
+        c.y , 0.0, -s.y,
+        s.y * s.x, c.x, c.y * s.x,
+        s.y * c.x, -s.x, c.y * c.x
     );
 }
 
 void main() {
     vec2 uv = (2.*gl_FragCoord.xy-iResolution.xy)/iResolution.y;
     vec2 mouseUV = iMouse.xy / iResolution.xy;
-    vec2 mouseDir = iMouseDir * 4.0;
+    vec3 mouseDir = iMouseDir * 4.0;
 
-    vec3 ro = vec3(iCamPos.x, iCamPos.y, iCamPos.z - 4.);
+    vec3 ro = vec3(iCamPos.x, iCamPos.y, -(mouseDir.z * 0.25) - 4.);
     vec3 rd = mat3(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1)) * normalize(vec3(uv, 1));
 
-    mat3 rot = rotationXY((mouseDir.xy - iResolution.xy * 0.5).yx * vec2(0.01, -0.01));
-    ro = rot * ro;
-    rd = rot * rd;
     #ifdef USE_SKUGGBOX_CAMERA
     skuggbox_camera(uv, ro, rd);
+    #endif
+
+    #ifndef USE_SKUGGBOX_CAMERA
+    mat3 rot = rotationXY((vec2(-mouseDir.x, -mouseDir.y) - iResolution.xy * 0.5).yx * vec2(0.01, -0.01));
+    ro = rot * ro;
+    rd = rot * rd;
     #endif
 
     vec3 color = bg(ro, rd);

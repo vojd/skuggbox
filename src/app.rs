@@ -154,7 +154,12 @@ fn render(
             };
 
             if let Some(mouse_dir) = shader.locations.mouse_dir {
-                gl.uniform_2_f32(Some(&mouse_dir), state.mouse.dir.x, state.mouse.dir.y);
+                gl.uniform_3_f32(
+                    Some(&mouse_dir),
+                    state.mouse.dir.x,
+                    state.mouse.dir.y,
+                    state.mouse.dir.z,
+                );
             }
 
             if let Some(sb_camera_transform) = shader.locations.sb_camera_transform {
