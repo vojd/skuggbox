@@ -1,5 +1,6 @@
 use crate::camera::{CameraModel, OrbitCamera};
 use crate::{Mouse, ShaderError, Timer};
+use glam::Vec3;
 use serde::{Deserialize, Serialize};
 
 pub struct AppState {
@@ -17,6 +18,8 @@ pub struct AppState {
     pub ui_visible: bool,
     pub is_fullscreen: bool,
     pub camera: Box<dyn CameraModel>,
+    // TODO(mathias): Move the camera pos into the camera model
+    pub camera_pos: Vec3,
     pub shader_error: Option<ShaderError>,
 }
 
@@ -35,6 +38,7 @@ impl Default for AppState {
             ui_visible: true,
             is_fullscreen: false,
             camera: Box::from(OrbitCamera::default()),
+            camera_pos: Vec3::default(),
             shader_error: None,
         }
     }

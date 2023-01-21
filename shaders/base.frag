@@ -8,6 +8,9 @@ uniform float iTime;
 uniform vec2 iResolution;
 // mx, my, zoom_level
 uniform vec4 iMouse;
+uniform vec2 iMouseDir;
+
+uniform vec3 iCamPos;
 
 #pragma skuggbox(camera)
 
@@ -15,6 +18,7 @@ uniform vec4 iMouse;
 #define STEPS 100
 #define EPS  0.002
 #define PI 3.141592
+const float DEG_TO_RAD = PI / 180.0;
 
 float smin(float a, float b, float k) {
     float h = max(k-abs(a-b), 0.0)/k;
@@ -99,32 +103,36 @@ vec3 bg(vec3 ro, vec3 rd) {
     return col;
 }
 
-mat3 camera(vec3 cameraPos, vec3 lookAtPoint) {
-    vec3 cameraDir = normalize(lookAtPoint - cameraPos); // camera direction
-    vec3 cameraRight = normalize(cross(vec3(0, 1, 0), cameraDir)); // camera right
-    vec3 cameraUp = normalize(cross(cameraDir, cameraRight)); // camera up
+// camera rotation : pitch, yaw
+mat3 rotationXY(vec2 angle) {
+    vec2 c = cos(angle);
+    vec2 s = sin(angle);
 
-    return mat3(-cameraRight, cameraUp, -cameraDir);
+    return mat3(
+        c.y      ,  0.0, -s.y,
+        s.y * s.x,  c.x,  c.y * s.x,
+        s.y * c.x, -s.x,  c.y * c.x
+    );
 }
 
-mat2 rotate2d(float theta) {
-    float s = sin(theta), c = cos(theta);
-    return mat2(c, -s, s, c);
-}
-
-void main(void) {
+void main() {
     vec2 uv = (2.*gl_FragCoord.xy-iResolution.xy)/iResolution.y;
     vec2 mouseUV = iMouse.xy / iResolution.xy;
+    vec2 mouseDir = iMouseDir * 4.0;
 
-    vec3 ro = vec3(0,0,-10);
+    vec3 ro = vec3(iCamPos.x, iCamPos.y, iCamPos.z - 4.);
     vec3 rd = mat3(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1)) * normalize(vec3(uv, 1));
+
+    mat3 rot = rotationXY((mouseDir.xy - iResolution.xy * 0.5).yx * vec2(0.01, -0.01));
+    ro = rot * ro;
+    rd = rot * rd;
     #ifdef USE_SKUGGBOX_CAMERA
     skuggbox_camera(uv, ro, rd);
     #endif
 
     vec3 color = bg(ro, rd);
-
     vec2 hit = intersect(ro, rd);
+
     if (hit.x < MAXD) {
         vec3 pos = ro + rd * hit.x;
         vec3 n = normal(pos);
