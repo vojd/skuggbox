@@ -9,6 +9,7 @@ pub enum CameraMovement {
     MoveBackward,
     StrafeLeft,
     StrafeRight,
+    Reset,
 }
 
 pub enum Action {
@@ -139,6 +140,11 @@ pub fn handle_actions(
                 }
                 CameraMovement::StrafeRight => {
                     app_state.camera_pos.x += 0.2;
+                }
+                CameraMovement::Reset => {
+                    app_state.camera_pos.x = 0.0;
+                    app_state.camera_pos.y = 0.0;
+                    app_state.camera_pos.z = 0.0;
                 }
             },
         }

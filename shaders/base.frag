@@ -1,12 +1,12 @@
 #version 330 core
 
 #pragma include(iq.glsl);
+
 in vec2 fragCoord;
 out vec4 fragColor;
 
 uniform float iTime;
 uniform vec2 iResolution;
-// mx, my, zoom_level
 uniform vec4 iMouse;
 uniform vec3 iMouseDir;
 
@@ -18,7 +18,6 @@ uniform vec3 iCamPos;
 #define STEPS 100
 #define EPS  0.002
 #define PI 3.141592
-const float DEG_TO_RAD = PI / 180.0;
 
 float smin(float a, float b, float k) {
     float h = max(k-abs(a-b), 0.0)/k;

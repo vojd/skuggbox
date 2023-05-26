@@ -78,6 +78,9 @@ pub fn handle_events<T>(
                                 VirtualKeyCode::W => {
                                     actions.push(Action::CameraMove(CameraMovement::MoveForward));
                                 }
+                                VirtualKeyCode::X => {
+                                    actions.push(Action::CameraMove(CameraMovement::Reset));
+                                }
 
                                 // Feature controls
                                 VirtualKeyCode::Key1 => {

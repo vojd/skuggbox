@@ -173,6 +173,11 @@ fn render(
                 gl.uniform_3_f32(Some(&cam_pos), pos.x, pos.y, pos.z);
             }
 
+            if let Some(sb_color_a) = shader.locations.sb_color_a {
+                let col = state.scene_vars.color_a;
+                gl.uniform_3_f32(Some(&sb_color_a), col[0], col[1], col[2]);
+            }
+
             // actually render
             gl.clear(glow::COLOR_BUFFER_BIT);
             gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 3);

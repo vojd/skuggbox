@@ -44,6 +44,7 @@ pub struct ShaderUniformLocations {
     /// For more full control over the camera, use the `sb_camera_transform` instead
     pub cam_pos: Option<UniformLocation>,
     pub sb_camera_transform: Option<UniformLocation>,
+    pub sb_color_a: Option<UniformLocation>,
 }
 
 #[derive(Clone)]
@@ -78,6 +79,7 @@ impl ShaderProgram {
     /// # Safety
     ///
     /// Extract some common uniform locations using raw OpenGL calls, hence the unsafeness
+    /// Values are set in the render function of app.rs
     pub unsafe fn uniform_locations(
         gl: &glow::Context,
         program: Program,
@@ -90,6 +92,7 @@ impl ShaderProgram {
         let mouse_dir = gl.get_uniform_location(program, "iMouseDir");
         let cam_pos = gl.get_uniform_location(program, "iCamPos");
         let sb_camera_transform = gl.get_uniform_location(program, "sbCameraTransform");
+        let sb_color_a = gl.get_uniform_location(program, "sbColorA");
 
         let locations = ShaderUniformLocations {
             resolution,
@@ -99,6 +102,7 @@ impl ShaderProgram {
             mouse_dir,
             cam_pos,
             sb_camera_transform,
+            sb_color_a,
         };
 
         log::debug!("shader locations {:?}", locations);
