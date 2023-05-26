@@ -35,14 +35,16 @@ impl Default for OrbitCamera {
 
 impl CameraModel for OrbitCamera {
     fn handle_mouse(&mut self, mouse: &Mouse, delta_time: f32) {
-        // scale the x and y differently since the movement range is different
-        self.angle += mouse.delta * Vec2::new(0.75, -1.5) * delta_time;
+        if mouse.is_rmb_down {
+            // scale the x and y differently since the movement range is different
+            self.angle += mouse.delta * Vec2::new(0.75, -1.5) * delta_time;
 
-        if self.angle.x < -1.0 {
-            self.angle.x = -1.0
-        }
-        if self.angle.y < -1.0 {
-            self.angle.y = -1.0
+            if self.angle.x < -1.0 {
+                self.angle.x = -1.0
+            }
+            if self.angle.y < -1.0 {
+                self.angle.y = -1.0
+            }
         }
     }
 

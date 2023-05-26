@@ -41,5 +41,11 @@ pub fn top_bar(
             false => "shader cam",
         };
         ui.label(format!("Camera mode: {}", cam_mode_str));
+
+        ui.spacing();
+
+        ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+            ui.color_edit_button_rgb(&mut app_state.scene_vars.color_a);
+        });
     });
 }

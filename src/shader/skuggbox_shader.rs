@@ -94,6 +94,11 @@ impl SkuggboxShader {
         match ShaderProgram::from_frag_src(&self.gl, self.content.shader_src.clone()) {
             Ok(program) => {
                 self.program = Some(program);
+
+                log::debug!(
+                    "Fragment shader size: {:?} bytes",
+                    self.content.shader_src.as_bytes().len()
+                );
                 Ok(())
             }
             Err(err) => {

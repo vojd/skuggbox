@@ -38,7 +38,13 @@ pub struct ShaderUniformLocations {
     pub time: Option<UniformLocation>,
     pub time_delta: Option<UniformLocation>,
     pub mouse: Option<UniformLocation>,
+    /// Direction of the mouse movement in vec2([-1.0, 0.0, 1.0], [-1.0, 0.0, 1.0])
+    pub mouse_dir: Option<UniformLocation>,
+    /// Convenience uniform for quickly getting a-s-d-w movement into the shader.
+    /// For more full control over the camera, use the `sb_camera_transform` instead
+    pub cam_pos: Option<UniformLocation>,
     pub sb_camera_transform: Option<UniformLocation>,
+    pub sb_color_a: Option<UniformLocation>,
 }
 
 #[derive(Clone)]
@@ -73,6 +79,7 @@ impl ShaderProgram {
     /// # Safety
     ///
     /// Extract some common uniform locations using raw OpenGL calls, hence the unsafeness
+    /// Values are set in the render function of app.rs
     pub unsafe fn uniform_locations(
         gl: &glow::Context,
         program: Program,
@@ -82,14 +89,20 @@ impl ShaderProgram {
         let resolution = gl.get_uniform_location(program, "iResolution");
         let time_delta = gl.get_uniform_location(program, "iTimeDelta");
         let mouse = gl.get_uniform_location(program, "iMouse");
+        let mouse_dir = gl.get_uniform_location(program, "iMouseDir");
+        let cam_pos = gl.get_uniform_location(program, "iCamPos");
         let sb_camera_transform = gl.get_uniform_location(program, "sbCameraTransform");
+        let sb_color_a = gl.get_uniform_location(program, "sbColorA");
 
         let locations = ShaderUniformLocations {
             resolution,
             time,
             time_delta,
             mouse,
+            mouse_dir,
+            cam_pos,
             sb_camera_transform,
+            sb_color_a,
         };
 
         log::debug!("shader locations {:?}", locations);

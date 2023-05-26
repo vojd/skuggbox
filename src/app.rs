@@ -153,10 +153,29 @@ fn render(
                 gl.uniform_4_f32(Some(&mouse), x, y, left_mouse, right_mouse);
             };
 
+            if let Some(mouse_dir) = shader.locations.mouse_dir {
+                gl.uniform_3_f32(
+                    Some(&mouse_dir),
+                    state.mouse.dir.x,
+                    state.mouse.dir.y,
+                    state.mouse.dir.z,
+                );
+            }
+
             if let Some(sb_camera_transform) = shader.locations.sb_camera_transform {
                 let camera = state.camera.calculate_uniform_data();
                 let f32_arr = camera.to_cols_array();
                 gl.uniform_matrix_4_f32_slice(Some(&sb_camera_transform), false, &f32_arr);
+            }
+
+            if let Some(cam_pos) = shader.locations.cam_pos {
+                let pos = state.camera_pos;
+                gl.uniform_3_f32(Some(&cam_pos), pos.x, pos.y, pos.z);
+            }
+
+            if let Some(sb_color_a) = shader.locations.sb_color_a {
+                let col = state.scene_vars.color_a;
+                gl.uniform_3_f32(Some(&sb_color_a), col[0], col[1], col[2]);
             }
 
             // actually render

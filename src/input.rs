@@ -6,7 +6,7 @@ use winit::{
 
 use crate::{
     state::{AppState, PlayMode},
-    Action, ActionModifier, WindowEventHandler,
+    Action, ActionModifier, CameraMovement, WindowEventHandler,
 };
 
 pub fn handle_events<T>(
@@ -63,6 +63,23 @@ pub fn handle_events<T>(
                                 }
                                 VirtualKeyCode::Key0 => {
                                     actions.push(Action::TimeStop);
+                                }
+
+                                // Movement controls
+                                VirtualKeyCode::A => {
+                                    actions.push(Action::CameraMove(CameraMovement::StrafeLeft));
+                                }
+                                VirtualKeyCode::D => {
+                                    actions.push(Action::CameraMove(CameraMovement::StrafeRight));
+                                }
+                                VirtualKeyCode::S => {
+                                    actions.push(Action::CameraMove(CameraMovement::MoveBackward));
+                                }
+                                VirtualKeyCode::W => {
+                                    actions.push(Action::CameraMove(CameraMovement::MoveForward));
+                                }
+                                VirtualKeyCode::X => {
+                                    actions.push(Action::CameraMove(CameraMovement::Reset));
                                 }
 
                                 // Feature controls

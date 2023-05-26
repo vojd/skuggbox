@@ -3,6 +3,15 @@ use crate::{seek, AppState, PlayMode, PlaybackControl, PreProcessorConfig, Shade
 use glam::Vec2;
 use winit::event_loop::ControlFlow;
 
+/// First person camera movement
+pub enum CameraMovement {
+    MoveForward,
+    MoveBackward,
+    StrafeLeft,
+    StrafeRight,
+    Reset,
+}
+
 pub enum Action {
     AppExit,
     TimePlay,
@@ -16,6 +25,7 @@ pub enum Action {
     // size
     CameraToggleIntegration(bool),
     CameraReset,
+    CameraMove(CameraMovement),
     UIToggleVisible,
     ToggleFullscreen,
     Screenshot,
@@ -118,6 +128,25 @@ pub fn handle_actions(
             Action::PrintSource => {
                 shader_service.source();
             }
+            Action::CameraMove(camera_movement) => match camera_movement {
+                CameraMovement::MoveForward => {
+                    app_state.camera_pos.z += 0.2;
+                }
+                CameraMovement::MoveBackward => {
+                    app_state.camera_pos.z -= 0.2;
+                }
+                CameraMovement::StrafeLeft => {
+                    app_state.camera_pos.x -= 0.2;
+                }
+                CameraMovement::StrafeRight => {
+                    app_state.camera_pos.x += 0.2;
+                }
+                CameraMovement::Reset => {
+                    app_state.camera_pos.x = 0.0;
+                    app_state.camera_pos.y = 0.0;
+                    app_state.camera_pos.z = 0.0;
+                }
+            },
         }
     }
 }
