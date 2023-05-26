@@ -85,10 +85,10 @@ pub fn seek(
     playback_control: PlaybackControl,
 ) -> f32 {
     let factor = match modifier {
-        ActionModifier::SuperSlow => 0.01,
-        ActionModifier::Slow => 0.1,
+        ActionModifier::SuperSlow => 0.03125,
+        ActionModifier::Slow => 0.125,
         ActionModifier::Normal => 1.0,
-        ActionModifier::Fast => 10.0,
+        ActionModifier::Fast => 8.0,
     };
 
     match playback_control {
