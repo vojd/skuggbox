@@ -67,6 +67,7 @@ impl ShaderService {
 
                 for shader in self.shaders.iter_mut() {
                     if shader.uses_file(&changed_file_path) {
+                        println!("reloading shader: {:?}", shader.get_main_shader_path());
                         let reloaded_shader =
                             self.pre_processor.load_file(shader.get_main_shader_path());
                         shader.mark_for_recompilation(reloaded_shader);
