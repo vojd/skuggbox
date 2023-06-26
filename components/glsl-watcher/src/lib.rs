@@ -2,7 +2,7 @@
 #![warn(rust_2018_idioms)]
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::Duration;
 
@@ -49,7 +49,7 @@ fn watch_loop(
                 println!("on change in: {:?}", path.to_str().unwrap());
                 if op == Op::WRITE && directories.contains(&path) {
                     println!("change in: {:?}", file_name);
-                    Some(path.strip_canonicalization())
+                    Some(path.canonicalize().unwrap())
                 } else {
                     None
                 }
@@ -71,23 +71,3 @@ fn watch_loop(
         std::thread::sleep(Duration::from_millis(10));
     }
 }
-
-pub trait StripCanonicalization where Self: AsRef<Path> {
-    #[cfg(not(target_os = "windows"))]
-    fn strip_canonicalization(&self) -> PathBuf {
-        self.as_ref().to_path_buf()
-    }
-
-    #[cfg(target_os = "windows")]
-    fn strip_canonicalization(&self) -> PathBuf {
-        const VERBATIM_PREFIX: &str = r#"\\?\"#;
-        let p = self.as_ref().display().to_string();
-        if p.starts_with(VERBATIM_PREFIX) {
-            PathBuf::from(&p[VERBATIM_PREFIX.len()..])
-        } else {
-            self.as_ref().to_path_buf()
-        }
-    }
-}
-
-impl StripCanonicalization for PathBuf {}

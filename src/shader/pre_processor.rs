@@ -125,7 +125,7 @@ impl PreProcessor {
                 match self.process_part(shader, loaded_files, path.clone()) {
                     Ok(part) => {
                         let source = part.shader_src.clone();
-                        shader.parts.insert(path, part);
+                        shader.parts.insert(path.canonicalize().unwrap(), part);
                         source
                     }
                     // TODO(mathias): Output this error in the UI
