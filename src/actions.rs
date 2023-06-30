@@ -61,7 +61,8 @@ pub fn handle_actions(
                     app_state.playback_time,
                     &app_state.modifier,
                     PlaybackControl::Stop,
-                )
+                );
+                audio.seek(app_state.playback_time);
             }
             Action::TogglePlayPause => match app_state.play_mode {
                 PlayMode::Playing => {
@@ -72,6 +73,7 @@ pub fn handle_actions(
                 PlayMode::Paused => {
                     app_state.timer.start();
                     app_state.play_mode = PlayMode::Playing;
+                    audio.seek(app_state.playback_time);
                     audio.play();
                     log::debug!("Playing");
                 }

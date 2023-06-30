@@ -97,11 +97,13 @@ impl AudioCallback for FrameWriter {
     type Channel = i16;
 
     fn callback(&mut self, out: &mut [i16]) {
-        match self.receiver.try_recv() {
-            Ok(time) => {
-                self.current_sample = (time * 44100.0) as usize;
+        loop {
+            match self.receiver.try_recv() {
+                Ok(time) => {
+                    self.current_sample = (time * 2.0 *  44100.0) as usize;
+                }
+                Err(_) => break,
             }
-            Err(_) => {}
         }
 
         let max_length = self.frames.len();
