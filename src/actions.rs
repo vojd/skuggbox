@@ -2,6 +2,7 @@ use crate::camera::OrbitCamera;
 use crate::{seek, AppState, PlayMode, PlaybackControl, PreProcessorConfig, ShaderService};
 use glam::Vec2;
 use winit::event_loop::ControlFlow;
+use crate::audio::AudioPlayer;
 
 /// First person camera movement
 pub enum CameraMovement {
@@ -37,6 +38,7 @@ pub fn handle_actions(
     app_state: &mut AppState,
     shader_service: &mut ShaderService,
     control_flow: &mut ControlFlow,
+    audio: &mut AudioPlayer,
 ) {
     for action in actions.drain(..) {
         match action {
@@ -46,10 +48,12 @@ pub fn handle_actions(
                 *control_flow = ControlFlow::Exit
             }
             Action::TimePlay => {
+                audio.play();
                 app_state.timer.start();
                 app_state.play_mode = PlayMode::Playing;
             }
             Action::TimePause => {
+                audio.pause();
                 app_state.play_mode = PlayMode::Paused;
             }
             Action::TimeStop => {
@@ -62,11 +66,13 @@ pub fn handle_actions(
             Action::TogglePlayPause => match app_state.play_mode {
                 PlayMode::Playing => {
                     app_state.play_mode = PlayMode::Paused;
+                    audio.pause();
                     log::debug!("Paused");
                 }
                 PlayMode::Paused => {
                     app_state.timer.start();
                     app_state.play_mode = PlayMode::Playing;
+                    audio.play();
                     log::debug!("Playing");
                 }
             },
@@ -75,14 +81,16 @@ pub fn handle_actions(
                     app_state.playback_time,
                     &app_state.modifier,
                     PlaybackControl::Forward(time),
-                )
+                );
+                audio.seek(app_state.playback_time);
             }
             Action::TimeRewind(time) => {
                 app_state.playback_time = seek(
                     app_state.playback_time,
                     &app_state.modifier,
                     PlaybackControl::Rewind(time),
-                )
+                );
+                audio.seek(app_state.playback_time);
             }
             Action::WindowClose => {}
             Action::WindowResize((width, height)) => {

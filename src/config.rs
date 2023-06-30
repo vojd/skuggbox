@@ -6,6 +6,9 @@ pub struct Config {
     #[clap(short, long, name = "SHADER_FILES", parse(from_os_str))]
     pub files: Option<Vec<PathBuf>>,
 
+    #[clap(short, long, name = "MP3_FILE", parse(from_os_str))]
+    pub mp3: Option<PathBuf>,
+
     #[clap(short, long)]
     pub always_on_top: bool,
 
