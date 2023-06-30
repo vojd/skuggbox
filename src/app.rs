@@ -4,12 +4,12 @@ use glow::{HasContext, VertexArray};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
+use crate::audio::AudioPlayer;
 use crate::{
     handle_actions, handle_events, top_bar, Action, AppState, AppWindow, Config, PlayMode,
     ShaderService,
 };
 use ui_backend::Ui;
-use crate::audio::AudioPlayer;
 
 pub struct App {
     pub event_loop: EventLoop<()>,
@@ -40,7 +40,7 @@ impl App {
         } = self;
 
         let mut audio = AudioPlayer::new();
-        if config.mp3.is_some()  {
+        if config.mp3.is_some() {
             audio.load(config.mp3.unwrap());
         }
 
@@ -105,7 +105,13 @@ impl App {
 
                 handle_events(&event, control_flow, &mut ui, app_state, &mut actions);
 
-                handle_actions(&mut actions, app_state, &mut shader_service, control_flow, &mut audio);
+                handle_actions(
+                    &mut actions,
+                    app_state,
+                    &mut shader_service,
+                    control_flow,
+                    &mut audio,
+                );
             });
 
             render(

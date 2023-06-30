@@ -1,15 +1,14 @@
+use minimp3::{Decoder, Error, Frame};
+use sdl2::audio::{AudioCallback, AudioDevice};
 use std::fs::File;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
-use minimp3::{Decoder, Frame, Error};
-use sdl2::audio::{AudioCallback, AudioDevice};
 
 pub struct FrameWriter {
     frames: Vec<i16>,
     current_sample: usize,
     receiver: Receiver<f32>,
 }
-
 
 pub struct AudioPlayer {
     device: Option<AudioDevice<FrameWriter>>,
@@ -31,11 +30,7 @@ impl AudioPlayer {
 
         loop {
             match decoder.next_frame() {
-                Ok(Frame {
-                       data,
-                       channels,
-                       ..
-                   }) => {
+                Ok(Frame { data, channels, .. }) => {
                     for i in 0..(data.len() / channels) {
                         frames.push(data[i * channels]);
                         frames.push(data[i * channels + 1]);
@@ -61,12 +56,14 @@ impl AudioPlayer {
         let frame_writer = FrameWriter {
             frames,
             current_sample: 0,
-            receiver
+            receiver,
         };
-        let device = audio_subsystem.open_playback(None, &desired_spec, |_spec| {
-            log::info!("Audio spec: {:?}", _spec);
-            frame_writer
-        }).unwrap();
+        let device = audio_subsystem
+            .open_playback(None, &desired_spec, |_spec| {
+                log::info!("Audio spec: {:?}", _spec);
+                frame_writer
+            })
+            .unwrap();
 
         self.device = Some(device);
         self.sender = Some(sender);
@@ -95,7 +92,6 @@ impl AudioPlayer {
         self.sender.as_ref().unwrap().send(time).unwrap();
     }
 }
-
 
 impl AudioCallback for FrameWriter {
     type Channel = i16;
@@ -128,4 +124,3 @@ impl AudioCallback for FrameWriter {
         }
     }
 }
-

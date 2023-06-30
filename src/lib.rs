@@ -3,6 +3,7 @@
 pub mod actions;
 pub mod app;
 
+pub mod audio;
 pub mod config;
 pub mod event;
 pub mod input;
@@ -15,7 +16,6 @@ pub mod timer;
 pub mod ui;
 pub mod utils;
 pub mod window;
-pub mod audio;
 
 pub use actions::*;
 pub use app::*;

@@ -1,8 +1,8 @@
+use crate::audio::AudioPlayer;
 use crate::camera::OrbitCamera;
 use crate::{seek, AppState, PlayMode, PlaybackControl, PreProcessorConfig, ShaderService};
 use glam::Vec2;
 use winit::event_loop::ControlFlow;
-use crate::audio::AudioPlayer;
 
 /// First person camera movement
 pub enum CameraMovement {
