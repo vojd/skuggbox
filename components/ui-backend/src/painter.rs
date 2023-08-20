@@ -44,7 +44,7 @@ impl TextureFilterExt for TextureFilter {
 /// This struct must be destroyed with [`Painter::destroy`] before dropping, to ensure OpenGL
 /// objects have been properly deleted and are not leaked.
 pub struct Painter {
-    gl: Arc<glow::Context>,
+    gl: Arc<Context>,
 
     max_texture_side: usize,
 
