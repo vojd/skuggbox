@@ -1,7 +1,6 @@
 use glam::{Mat4, Vec2, Vec3, Vec4};
-use glutin::event::WindowEvent;
 use std::f32::consts::PI;
-use winit::event::{ElementState, MouseScrollDelta, VirtualKeyCode};
+use winit::event::{ElementState, MouseScrollDelta, VirtualKeyCode, WindowEvent};
 
 use crate::event::WindowEventHandler;
 use crate::mouse::Mouse;

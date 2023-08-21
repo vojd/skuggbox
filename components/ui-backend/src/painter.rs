@@ -513,7 +513,7 @@ impl Painter {
 
                 let data: &[u8] = bytemuck::cast_slice(image.pixels.as_ref());
 
-                self.upload_texture_srgb(delta.pos, image.size, delta.filter, data);
+                self.upload_texture_srgb(delta.pos, image.size, TextureFilter::Linear, data);
             }
             egui::ImageData::Font(image) => {
                 assert_eq!(
@@ -528,11 +528,11 @@ impl Painter {
                     1.0
                 };
                 let data: Vec<u8> = image
-                    .srgba_pixels(gamma)
+                    .srgba_pixels(Some(gamma))
                     .flat_map(|a| a.to_array())
                     .collect();
 
-                self.upload_texture_srgb(delta.pos, image.size, delta.filter, &data);
+                self.upload_texture_srgb(delta.pos, image.size, TextureFilter::Linear, &data);
             }
         };
     }

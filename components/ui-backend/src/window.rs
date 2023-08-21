@@ -1,5 +1,5 @@
 pub use egui_winit;
-use egui_winit::winit;
+use egui_winit::{winit, EventResponse};
 
 /// Use [`egui`] from a [`glow`] app based on [`winit`].
 pub struct Ui {
@@ -37,7 +37,7 @@ impl Ui {
     /// and only when this returns `false` pass on the events to your game.
     ///
     /// Note that egui uses `tab` to move focus between elements, so this will always return `true` for tabs.
-    pub fn on_event(&mut self, event: &winit::event::WindowEvent<'_>) -> bool {
+    pub fn on_event(&mut self, event: &winit::event::WindowEvent<'_>) -> EventResponse {
         self.egui_winit.on_event(&self.egui_ctx, event)
     }
 

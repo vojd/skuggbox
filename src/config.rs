@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 #[derive(clap::Parser, Debug, Clone)]
 #[clap(name = "skuggbox", about = "Skuggbox GLSL shader viewer")]
-pub struct Config {
+pub struct AppConfig {
     #[clap(short, long, name = "SHADER_FILES", parse(from_os_str))]
     pub files: Option<Vec<PathBuf>>,
 
