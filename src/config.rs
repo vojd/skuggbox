@@ -1,14 +1,16 @@
 use std::path::PathBuf;
 
-#[derive(clap::Parser, Debug, Clone)]
-#[clap(name = "skuggbox", about = "Skuggbox GLSL shader viewer")]
+use clap::Parser;
+
+#[derive(Parser, Debug, Clone)]
+#[command(about = "skuggbox", long_about = "Skuggbox GLSL shader viewer")]
 pub struct AppConfig {
-    #[clap(short, long, name = "SHADER_FILES", parse(from_os_str))]
+    #[arg(short, long, name = "SHADER_FILES")]
     pub files: Option<Vec<PathBuf>>,
 
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub always_on_top: bool,
 
-    #[clap(short, long, name = "NEW_FILE", parse(from_os_str))]
+    #[arg(short, long, name = "NEW_FILE")]
     pub new: Option<PathBuf>,
 }

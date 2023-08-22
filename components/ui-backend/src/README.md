@@ -4,6 +4,8 @@ Responsible for how egui draws on a GL context.
 
 The code in this repo is a version of [egui glow](https://github.com/emilk/egui/tree/master/crates/egui_glow/)
 
+For the moment we need to keep this separate from `egui_glow` as it depends on older versions of `egui-winit` and `glutin`.
+
 To use on linux, run
 
 ```bash
