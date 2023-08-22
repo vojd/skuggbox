@@ -6,7 +6,7 @@ use winit::{
 
 use crate::{
     state::{AppState, PlayMode},
-    Action, ActionModifier, AppWindow, CameraMovement, WindowEventHandler,
+    Action, ActionModifier, CameraMovement, WindowEventHandler,
 };
 
 pub fn handle_events<T>(

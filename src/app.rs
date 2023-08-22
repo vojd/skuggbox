@@ -1,9 +1,6 @@
+use glow::HasContext;
+use glow::VertexArray;
 use std::sync::Arc;
-
-use glow::{HasContext, VertexArray};
-use glutin::context::AsRawContext;
-use glutin::surface::{GlSurface, Surface, WindowSurface};
-use winit::event::Event;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
@@ -40,8 +37,8 @@ impl App {
             event_loop,
             app_window,
             app_state,
-            gl,
-            ui,
+            gl: _,
+            ui: _,
         } = self;
 
         let mut actions: Vec<Action> = vec![];
@@ -77,12 +74,12 @@ impl App {
                 app_state.delta_time = app_state.timer.delta_time;
             }
 
-            event_loop.run_return(|event, window_target, control_flow| {
+            event_loop.run_return(|event, _window_target, control_flow| {
                 *control_flow = ControlFlow::Wait;
 
                 // TODO: No unwrap on the window object
 
-                let _repaint_after = ui.run(&app_window.window.as_ref().unwrap(), |egui_ctx| {
+                let _repaint_after = ui.run(app_window.window.as_ref().unwrap(), |egui_ctx| {
                     egui::TopBottomPanel::top("view_top").show(egui_ctx, |ui| {
                         top_bar(ui, app_state, &mut actions, &shader_service);
                     });
@@ -281,7 +278,7 @@ fn render(
 
             if state.ui_visible {
                 if let Some(window) = &app_window.window {
-                    // egui_glow.paint(window);
+                    egui_glow.paint(window);
                 }
             }
         }

@@ -1,8 +1,8 @@
 use glow::Context;
 use glutin::config::{Config, ConfigTemplateBuilder, GlConfig};
 use glutin::context::{
-    AsRawContext, ContextApi, ContextAttributesBuilder, GlContext, NotCurrentContext,
-    NotCurrentGlContextSurfaceAccessor, PossiblyCurrentContext, Version,
+    ContextApi, ContextAttributesBuilder, NotCurrentContext, NotCurrentGlContextSurfaceAccessor,
+    PossiblyCurrentContext, Version,
 };
 use glutin::display::{GetGlDisplay, GlDisplay};
 use glutin::surface::{GlSurface, Surface, WindowSurface};
@@ -119,7 +119,7 @@ impl AppWindow {
         let gl_surface = unsafe {
             gl_config
                 .display()
-                .create_window_surface(&gl_config, &attrs)
+                .create_window_surface(gl_config, &attrs)
                 .unwrap()
         };
 
@@ -147,7 +147,7 @@ impl AppWindow {
     pub fn swap_buffers(&self) {
         let surface = self.gl_surface.as_ref().unwrap();
         let gl_context = self.gl_context.as_ref().unwrap();
-        if let Err(err) = surface.swap_buffers(&gl_context) {
+        if let Err(err) = surface.swap_buffers(gl_context) {
             log::error!("Failed to swap buffers {:?}", err);
         };
     }
