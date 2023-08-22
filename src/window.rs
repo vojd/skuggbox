@@ -22,10 +22,8 @@ pub struct AppWindow {
     // glutin
     pub not_current_context: Option<NotCurrentContext>,
     pub gl_config: Config,
-
     gl_context: Option<PossiblyCurrentContext>,
     gl_surface: Option<Surface<WindowSurface>>,
-    // glow
 
     // winit
     pub window: Option<Window>,

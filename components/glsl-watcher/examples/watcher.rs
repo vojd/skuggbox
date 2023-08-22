@@ -22,6 +22,4 @@ pub fn main() {
 
         thread::sleep(Duration::from_millis(10));
     }
-
-    // sender_thread.join().expect("Sender thread panic");
 }
