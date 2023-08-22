@@ -118,90 +118,6 @@ impl App {
             app_state.timer.stop();
         }
     }
-
-    // pub fn run(&mut self, config: Config) {
-    //     let App {
-    //         event_loop,
-    //         app_window,
-    //         app_state,
-    //         gl,
-    //     } = self;
-    //
-    //     let mut ui = Ui::new(event_loop, gl.clone());
-    //
-    //     let mut actions: Vec<Action> = vec![];
-    //
-    //     let shader_files = config.files.unwrap();
-    //     log::debug!("Shader files: {:?}", shader_files);
-    //     let mut shader_service = ShaderService::new(gl.clone(), shader_files);
-    //     shader_service.watch();
-    //     let _ = shader_service.run(gl);
-    //
-    //     let vertex_array = unsafe {
-    //         gl.create_vertex_array()
-    //             .expect("Cannot create vertex array")
-    //     };
-    //
-    //     while app_state.is_running {
-    //         let _ = shader_service.run(gl);
-    //         app_state.shader_error = shader_service.last_error.clone();
-    //
-    //         // force UI open if we have a shader error
-    //         if app_state.shader_error.is_some() {
-    //             app_state.ui_visible = true;
-    //         }
-    //
-    //         if matches!(app_state.play_mode, PlayMode::Playing) {
-    //             app_state.timer.start();
-    //             // TODO(mathias): Remove this. Only use `app_state.timer.delta_time`
-    //             app_state.delta_time = app_state.timer.delta_time;
-    //         }
-    //
-    //         event_loop.run_return(|event, _, control_flow| {
-    //             *control_flow = ControlFlow::Wait;
-    //
-    //             // TODO: No unwrap on the window object
-    //             let _repaint_after = ui.run(&app_window.window.unwrap(), |egui_ctx| {
-    //                 egui::TopBottomPanel::top("view_top").show(egui_ctx, |ui| {
-    //                     top_bar(ui, app_state, &mut actions, &shader_service);
-    //                 });
-    //
-    //                 if let Some(error) = &app_state.shader_error {
-    //                     let mut error = format!("{}", error);
-    //                     egui::TopBottomPanel::bottom("view_bottom").show(egui_ctx, |ui| {
-    //                         ui.horizontal(|ui| {
-    //                             ui.add(
-    //                                 egui::TextEdit::multiline(&mut error)
-    //                                     .font(egui::TextStyle::Monospace)
-    //                                     .code_editor()
-    //                                     .desired_rows(4)
-    //                                     .desired_width(f32::INFINITY)
-    //                                     .lock_focus(true),
-    //                             )
-    //                         });
-    //                     });
-    //                 }
-    //             });
-    //
-    //             handle_events(&event, control_flow, &mut ui, app_state, &mut actions);
-    //
-    //             handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
-    //         });
-    //
-    //         if let Ok(gl) = gl {
-    //             render(
-    //                 gl.clone(),
-    //                 vertex_array,
-    //                 &mut ui,
-    //                 app_window,
-    //                 app_state,
-    //                 &shader_service,
-    //             );
-    //         }
-    //
-    //         app_state.timer.stop();
-    //     }
-    // }
 }
 
 fn render(
@@ -283,8 +199,6 @@ fn render(
             }
         }
     }
-    // TODO: Swap buffers
-    // app_window.window_context.swap_buffers().unwrap();
-    // surface.swap_buffers(gl);
+
     app_window.swap_buffers();
 }

@@ -26,7 +26,6 @@ pub struct AppWindow {
     gl_context: Option<PossiblyCurrentContext>,
     gl_surface: Option<Surface<WindowSurface>>,
     // glow
-    // pub gl: Option<Arc<glow::Context>>,
 
     // winit
     pub window: Option<Window>,
@@ -73,6 +72,7 @@ impl AppWindow {
 
         let fallback_context_attributes = ContextAttributesBuilder::new()
             // When GlProfile::Core is used at least 3.3 will be used
+            // TODO(mathias): Take a closer look at how this works and if we can have fallbacks
             .with_context_api(ContextApi::OpenGl(None))
             .build(raw_window_handle);
 
@@ -95,7 +95,6 @@ impl AppWindow {
                 })
         });
 
-        // Create and return self and return gl and event_loop
         (
             Self {
                 not_current_context,
@@ -104,7 +103,6 @@ impl AppWindow {
                 gl_surface: None,
                 window,
             },
-            // gl,
             event_loop,
         )
     }

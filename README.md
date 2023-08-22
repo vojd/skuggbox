@@ -11,6 +11,14 @@ cargo watch -x "run --release"
 
 ```
 
+### Setup
+
+On Linux it might be required to run to get the UI to render
+
+```bash
+sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev
+```
+
 ### Run
 
 `cargo run --release shader.glsl`
