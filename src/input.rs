@@ -12,7 +12,6 @@ use crate::{
 pub fn handle_events<T>(
     event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
-    app_window: &AppWindow,
     ui: &mut Ui,
     app_state: &mut AppState,
     actions: &mut Vec<Action>,
@@ -22,21 +21,6 @@ pub fn handle_events<T>(
     // context.swap_buffers().unwrap();
 
     match event {
-        // Recommended by winit that all gfx context initialization goes here
-        // Event::Resumed {
-        // //     let attrs = window.build_surface_attributes(<_>::default());
-        // //     let gl_surface = unsafe {
-        // // gl_config
-        // // .display()
-        // // .create_window_surface(&gl_config, &attrs)
-        // // .unwrap()
-        // // };
-        // //     let gl_context: PossiblyCurrentContext = not_current_gl_context
-        // //     .take()
-        // //     .unwrap()
-        // //     .make_current(&gl_surface)
-        // //     .unwrap();
-        // },
         Event::WindowEvent { event, .. } => {
             match event {
                 WindowEvent::CloseRequested => {
@@ -129,7 +113,8 @@ pub fn handle_events<T>(
             app_state
                 .camera
                 .handle_mouse(&app_state.mouse, app_state.delta_time);
-            ui.on_event(event);
+
+            let _event_response = ui.on_event(event);
         }
 
         Event::MainEventsCleared => {

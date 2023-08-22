@@ -40,8 +40,8 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
 
     if config.files.is_some() {
         log::info!("loading existing shader");
-        app.init(config);
-        // app.run(config);
+        // app.init(config);
+        app.run(config);
     }
     Ok(())
 }

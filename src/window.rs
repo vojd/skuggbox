@@ -1,11 +1,13 @@
 use glow::Context;
 use glutin::config::{Config, ConfigTemplateBuilder, GlConfig};
 use glutin::context::{
-    ContextApi, ContextAttributesBuilder, NotCurrentContext, NotCurrentGlContextSurfaceAccessor,
-    PossiblyCurrentContext, Version,
+    AsRawContext, ContextApi, ContextAttributesBuilder, GlContext, NotCurrentContext,
+    NotCurrentGlContextSurfaceAccessor, PossiblyCurrentContext, Version,
 };
 use glutin::display::{GetGlDisplay, GlDisplay};
-use glutin::surface::WindowSurface;
+use glutin::surface::{GlSurface, Surface, WindowSurface};
+use std::ffi::CString;
+use std::sync::Arc;
 
 use glutin_winit::{DisplayBuilder, GlWindow};
 use raw_window_handle::HasRawWindowHandle;
@@ -19,8 +21,12 @@ use crate::{AppConfig, AppState};
 pub struct AppWindow {
     // glutin
     pub not_current_context: Option<NotCurrentContext>,
-    pub gl_context: Option<PossiblyCurrentContext>,
     pub gl_config: Config,
+
+    gl_context: Option<PossiblyCurrentContext>,
+    gl_surface: Option<Surface<WindowSurface>>,
+    // glow
+    // pub gl: Option<Arc<glow::Context>>,
 
     // winit
     pub window: Option<Window>,
@@ -30,7 +36,9 @@ impl AppWindow {
     /// Setup the required bits for a winit Window
     /// Returns Self and the winit event loop
     pub fn new(_config: AppConfig, app_state: &AppState) -> (Self, EventLoop<()>) {
+        // TODO: Move event loop out of AppWindow
         let event_loop = EventLoop::new();
+
         // Let winit create a window builder
         let window_builder = WindowBuilder::new()
             .with_title("Skuggbox")
@@ -40,7 +48,7 @@ impl AppWindow {
 
         let display_builder = DisplayBuilder::new().with_window_builder(Some(window_builder));
 
-        let (mut window, gl_config) = display_builder
+        let (window, gl_config) = display_builder
             .build(&event_loop, template, |configs| {
                 configs
                     .reduce(|accum, config| {
@@ -73,7 +81,7 @@ impl AppWindow {
             .build(raw_window_handle);
 
         // This gl context has not been initialized yet. It will be set up in the Event::Resume handler
-        let mut not_current_context = Some(unsafe {
+        let not_current_context = Some(unsafe {
             gl_display
                 .create_context(&gl_config, &context_attributes)
                 .unwrap_or_else(|_| {
@@ -87,35 +95,13 @@ impl AppWindow {
                 })
         });
 
-        {
-            let window = window.as_ref().unwrap();
-            let attrs = window.build_surface_attributes(<_>::default());
-            let gl_config = &gl_config;
-            let gl_surface = unsafe {
-                gl_config
-                    .display()
-                    .create_window_surface(&gl_config, &attrs)
-                    .unwrap()
-            };
-
-            let ctx = not_current_context
-                .take()
-                .unwrap()
-                .make_current(&gl_surface)
-                .unwrap();
-        }
-
-        // Forge a gl_context out of the not_current_gl_context
-        // NOTE: This might fail when / if skuggbox needs to recreate the context later
-        // TODO: Add the context creation within the event::resumed part of the event loop as in the url below
-        // https://github.com/rust-windowing/glutin/blob/master/glutin_examples/src/lib.rs#L16
-
         // Create and return self and return gl and event_loop
         (
             Self {
                 not_current_context,
-                gl_context: None,
                 gl_config,
+                gl_context: None,
+                gl_surface: None,
                 window,
             },
             // gl,
@@ -123,7 +109,10 @@ impl AppWindow {
         )
     }
 
-    pub fn create_window_context(&mut self) {
+    /// Forge a gl_context (PossiblyCurrentContext) out of the not_current_context
+    /// NOTE: This should only be called during the Event::Resume part of the event loop as per this doc
+    /// https://github.com/rust-windowing/glutin/blob/master/glutin_examples/src/lib.rs#L16
+    pub fn create_window_context(&mut self) -> Arc<Context> {
         let window = self.window.as_ref().unwrap();
         let attrs = window.build_surface_attributes(<_>::default());
         let gl_config = &self.gl_config;
@@ -134,41 +123,32 @@ impl AppWindow {
                 .unwrap()
         };
 
-        let ctx = self
+        let gl_context = self
             .not_current_context
             .take()
             .unwrap()
             .make_current(&gl_surface)
             .unwrap();
-    }
-    // let gl_surface = unsafe {
-    //     *self
-    //         .gl_config
-    //         .take()
-    //         .display()
-    //         .create_window_surface(&self.gl_config, &attrs)
-    //         .unwrap()
-    // };
-    //
-    // let ctx = self.not_current_context.take();
-    // let gl_context: PossiblyCurrentContext = ctx.unwrap().make_current(&gl_surface).unwrap();
-}
 
-// pub fn create_window_context(app_window: &mut AppWindow) {
-//     let window = app_window.window.as_ref().unwrap();
-//     let attrs = window.build_surface_attributes(<_>::default());
-//     let gl_config = &app_window.gl_config;
-//     let gl_surface = unsafe {
-//         gl_config
-//             .display()
-//             .create_window_surface(&gl_config, &attrs)
-//             .unwrap()
-//     };
-//
-//     // TODO(mathias) gah! ownership problem
-//     let ctx = app_window.not_current_context.as_mut().unwrap();
-//
-//     let gl_context = ctx.make_current(&gl_surface).unwrap();
-//
-//     // app_window.gl_context = Option::from(gl_context);
-// }
+        let gl_display = gl_config.display();
+        let gl = unsafe {
+            Context::from_loader_function(|symbol| {
+                let symbol = CString::new(symbol).unwrap();
+                gl_display.get_proc_address(symbol.as_c_str()).cast()
+            })
+        };
+        self.gl_context = Some(gl_context);
+        // Return the gl context and the WindowSurface which is used to swap buffers
+        self.gl_surface = Some(gl_surface);
+        Arc::new(gl)
+    }
+
+    /// Only call when you know that the gl context is initialized or you'll have a panic
+    pub fn swap_buffers(&self) {
+        let surface = self.gl_surface.as_ref().unwrap();
+        let gl_context = self.gl_context.as_ref().unwrap();
+        if let Err(err) = surface.swap_buffers(&gl_context) {
+            log::error!("Failed to swap buffers {:?}", err);
+        };
+    }
+}
