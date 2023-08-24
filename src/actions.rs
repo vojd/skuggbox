@@ -118,6 +118,7 @@ pub fn handle_actions(
             }
             Action::UIToggleVisible => {
                 app_state.ui_visible = !app_state.ui_visible;
+                log::debug!("Action::UIToggleVisible {:?}", app_state.ui_visible);
             }
             Action::ToggleFullscreen => {
                 app_state.is_fullscreen = !app_state.is_fullscreen;

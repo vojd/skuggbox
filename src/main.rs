@@ -9,7 +9,7 @@ use std::process::exit;
 use clap::Parser;
 use simple_logger::SimpleLogger;
 
-use skuggbox::{app::App, config::Config};
+use skuggbox::{app::App, config::AppConfig};
 
 /// Creates a new default shader at the gives path
 fn create_new_default_shader(path: PathBuf) -> std::io::Result<u64> {
@@ -24,7 +24,7 @@ fn main() -> anyhow::Result<(), anyhow::Error> {
     SimpleLogger::new().init().unwrap();
 
     // Parse command line arguments using `structopt`
-    let config = Config::parse();
+    let config = AppConfig::parse();
     let mut app = App::from_config(config.clone());
 
     if let Some(new_file) = config.clone().new {

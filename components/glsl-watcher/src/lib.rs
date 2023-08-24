@@ -6,15 +6,16 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::Duration;
 
-use notify::{raw_watcher, Op, RawEvent, RecursiveMode, Watcher};
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 
-/// Using `notify` to watch for changes to any defined shader file
+/// Using `notify` to watch for changes to files in any directories
+/// where the files resides.
 /// `sender` - std::sync::mpsc::channel
 /// `files` - Which files to watch
 ///
 pub fn watch_all(sender: Sender<PathBuf>, files: Vec<PathBuf>) {
-    let (watch_sender, watch_receiver) = channel();
-    let mut watcher = raw_watcher(watch_sender).unwrap();
+    let (tx, rx) = channel();
+    let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
 
     let directories: Vec<PathBuf> = files
         .iter()
@@ -25,47 +26,33 @@ pub fn watch_all(sender: Sender<PathBuf>, files: Vec<PathBuf>) {
     for dir in &directories {
         watcher
             .watch(dir.as_path(), RecursiveMode::Recursive)
-            .unwrap();
+            .unwrap(); // TODO: Replace with GLSLWatcherError
         println!("   {:?}", dir);
     }
 
-    watch_loop(sender, watch_receiver, directories);
+    watch_loop(sender, rx, directories);
 }
 
 fn watch_loop(
     sender: Sender<PathBuf>,
-    watch_receiver: Receiver<RawEvent>,
-    directories: Vec<PathBuf>,
+    watch_receiver: Receiver<notify::Result<notify::Event>>,
+    _directories: Vec<PathBuf>,
 ) {
+    // TODO: Handle the different types of event for example removing file(s)
+    // EventKind::Any => {}
+    // EventKind::Access(_) => {}
+    // EventKind::Create(_) => {}
+    // EventKind::Modify(_) => {}
+    // EventKind::Remove(_) => {}
+    // EventKind::Other => {}
     loop {
-        // NOTE: It's likely that a change to a file will trigger two successive WRITE events
-        let changed_file = match watch_receiver.recv() {
-            Ok(RawEvent {
-                path: Some(path),
-                op: Ok(op),
-                ..
-            }) => {
-                let file_name = path.file_name().unwrap().to_str().unwrap();
-                println!("on change in: {:?}", path.to_str().unwrap());
-                if op == Op::WRITE && directories.contains(&path) {
-                    println!("change in: {:?}", file_name);
-                    Some(path.canonicalize().unwrap())
-                } else {
-                    None
-                }
+        while let Ok(res) = watch_receiver.recv() {
+            if let Ok(event) = res {
+                let path = event.paths.first().unwrap();
+                sender
+                    .send(path.to_owned().canonicalize().unwrap())
+                    .unwrap();
             }
-            Ok(event) => {
-                println!("broken event: {:?}", event);
-                None
-            }
-            Err(e) => {
-                println!("watch error: {:?}", e);
-                None
-            }
-        };
-
-        if let Some(cf) = changed_file {
-            sender.send(cf).unwrap();
         }
 
         std::thread::sleep(Duration::from_millis(10));

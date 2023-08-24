@@ -17,8 +17,6 @@ pub fn handle_events<T>(
     actions: &mut Vec<Action>,
 ) {
     *control_flow = ControlFlow::Poll;
-    // TODO(mathias): Fix!
-    // context.swap_buffers().unwrap();
 
     match event {
         Event::WindowEvent { event, .. } => {
@@ -113,7 +111,8 @@ pub fn handle_events<T>(
             app_state
                 .camera
                 .handle_mouse(&app_state.mouse, app_state.delta_time);
-            ui.on_event(event);
+
+            let _event_response = ui.on_event(event);
         }
 
         Event::MainEventsCleared => {

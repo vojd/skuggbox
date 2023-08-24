@@ -1,11 +1,11 @@
+use glow::HasContext;
+use glow::VertexArray;
 use std::sync::Arc;
-
-use glow::{HasContext, VertexArray};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
 use crate::{
-    handle_actions, handle_events, top_bar, Action, AppState, AppWindow, Config, PlayMode,
+    handle_actions, handle_events, top_bar, Action, AppConfig, AppState, AppWindow, PlayMode,
     ShaderService,
 };
 use ui_backend::Ui;
@@ -14,47 +14,53 @@ pub struct App {
     pub event_loop: EventLoop<()>,
     pub app_window: AppWindow,
     pub app_state: AppState,
-    pub gl: Arc<glow::Context>,
+    pub ui: Option<Ui>,
+    pub gl: Option<Arc<glow::Context>>,
 }
 
 impl App {
-    pub fn from_config(config: Config) -> Self {
+    pub fn from_config(config: AppConfig) -> Self {
         let app_state = AppState::default();
-        let (app_window, gl, event_loop) = AppWindow::new(config, &app_state);
-
+        let (app_window, event_loop) = AppWindow::new(config, &app_state);
+        let ui = None;
         Self {
             event_loop,
             app_window,
             app_state,
-            gl: Arc::new(gl),
+            ui,
+            gl: None,
         }
     }
 
-    pub fn run(&mut self, config: Config) {
+    pub fn run(&mut self, config: AppConfig) {
         let App {
             event_loop,
             app_window,
             app_state,
-            gl,
+            gl: _,
+            ui: _,
         } = self;
 
-        let mut ui = Ui::new(event_loop, gl.clone());
-
         let mut actions: Vec<Action> = vec![];
+
+        let gl = app_window.create_window_context();
+        let mut ui = Ui::new(event_loop, gl.clone());
 
         let shader_files = config.files.unwrap();
         log::debug!("Shader files: {:?}", shader_files);
         let mut shader_service = ShaderService::new(gl.clone(), shader_files);
         shader_service.watch();
-        let _ = shader_service.run(gl);
+        let _ = shader_service.run(gl.as_ref());
 
         let vertex_array = unsafe {
             gl.create_vertex_array()
                 .expect("Cannot create vertex array")
         };
 
+        log::debug!("EventLoop: Starting");
+
         while app_state.is_running {
-            let _ = shader_service.run(gl);
+            let _ = shader_service.run(gl.as_ref());
             app_state.shader_error = shader_service.last_error.clone();
 
             // force UI open if we have a shader error
@@ -68,10 +74,12 @@ impl App {
                 app_state.delta_time = app_state.timer.delta_time;
             }
 
-            event_loop.run_return(|event, _, control_flow| {
+            event_loop.run_return(|event, _window_target, control_flow| {
                 *control_flow = ControlFlow::Wait;
 
-                let _repaint_after = ui.run(app_window.window_context.window(), |egui_ctx| {
+                // TODO: No unwrap on the window object
+
+                let _repaint_after = ui.run(app_window.window.as_ref().unwrap(), |egui_ctx| {
                     egui::TopBottomPanel::top("view_top").show(egui_ctx, |ui| {
                         top_bar(ui, app_state, &mut actions, &shader_service);
                     });
@@ -180,12 +188,17 @@ fn render(
 
             // actually render
             gl.clear(glow::COLOR_BUFFER_BIT);
+            macros::check_for_gl_error!(&gl, "clear");
             gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 3);
+            macros::check_for_gl_error!(&gl, "draw_arrays");
 
             if state.ui_visible {
-                egui_glow.paint(app_window.window_context.window());
+                if let Some(window) = &app_window.window {
+                    egui_glow.paint(window);
+                }
             }
         }
     }
-    app_window.window_context.swap_buffers().unwrap();
+
+    app_window.swap_buffers();
 }
