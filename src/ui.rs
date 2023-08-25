@@ -13,7 +13,6 @@ pub fn top_bar(
         ui.label(time);
 
         if ui.button("⏹").clicked() {
-            actions.push(Action::TogglePlayPause);
             actions.push(Action::TimeStop);
         }
         // rewind

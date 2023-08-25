@@ -57,7 +57,9 @@ pub fn handle_actions(
                     app_state.playback_time,
                     &app_state.modifier,
                     PlaybackControl::Stop,
-                )
+                );
+                app_state.play_mode = PlayMode::Paused;
+                log::debug!("Stopped");
             }
             Action::TogglePlayPause => match app_state.play_mode {
                 PlayMode::Playing => {
