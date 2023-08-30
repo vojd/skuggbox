@@ -97,6 +97,7 @@ pub fn handle_events<T>(
                                 VirtualKeyCode::F11 => actions.push(Action::ToggleFullscreen),
 
                                 VirtualKeyCode::P => actions.push(Action::PrintSource),
+                                VirtualKeyCode::F12 => actions.push(Action::TakeSnapshot),
                                 _ => {}
                             }
                         }

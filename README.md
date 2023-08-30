@@ -47,3 +47,10 @@ cargo run --release -- --help
 
 ### Misc
 See file `.ignore` for directories and files ignored by `cargo watch`
+
+
+## Shortcuts
+
+```text
+F12 => Take snapshot of current shader. Saved into shader_dir/snapshots/snapshot-<datetime>.glsl
+```
