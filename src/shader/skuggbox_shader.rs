@@ -19,6 +19,7 @@ pub struct ShaderContent {
     /// The filename constitutes the `shader_id`
     /// <shader_id>.glsl
     pub shader_id: String,
+    /// Path to the main shader, full path + filename
     pub main_shader_path: PathBuf,
     pub parts: BTreeMap<PathBuf, Part>,
     /// contains the final shader after it's been pre-processed

@@ -30,6 +30,7 @@ pub enum Action {
     ToggleFullscreen,
     Screenshot,
     PrintSource,
+    TakeSnapshot,
 }
 
 pub fn handle_actions(
@@ -150,6 +151,8 @@ pub fn handle_actions(
                     app_state.camera_pos.z = 0.0;
                 }
             },
+
+            Action::TakeSnapshot => shader_service.save_snapshot(),
         }
     }
 }

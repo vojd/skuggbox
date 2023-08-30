@@ -17,20 +17,20 @@ pub fn watch_all(sender: Sender<PathBuf>, files: Vec<PathBuf>) {
     let (tx, rx) = channel();
     let mut watcher = RecommendedWatcher::new(tx, Config::default()).unwrap();
 
-    let directories: Vec<PathBuf> = files
+    let file_paths: Vec<PathBuf> = files
         .iter()
         .filter_map(|p| fs::canonicalize(p).ok())
         .collect();
 
     println!("Watching files shaders in:");
-    for dir in &directories {
+    for path in &file_paths {
         watcher
-            .watch(dir.as_path(), RecursiveMode::Recursive)
+            .watch(path.as_path(), RecursiveMode::Recursive)
             .unwrap(); // TODO: Replace with GLSLWatcherError
-        println!("   {:?}", dir);
+        println!("   {:?}", path);
     }
 
-    watch_loop(sender, rx, directories);
+    watch_loop(sender, rx, file_paths);
 }
 
 fn watch_loop(

@@ -35,6 +35,8 @@ raw-window-handle = "0.5.0"
 regex = "1.9"
 serde = { version = "1.0", features = ["derive"] }
 simple_logger = "1"
+# simple_logger is dependent on `time`.
+time = { version = "0.3.26", features = ["local-offset"]}
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 quote = "1.0"
 #clap = { git = "https://github.com/clap-rs/clap/", version = "3.0.0-beta.4" } #clap-v3 = "3.0.0-beta.1"

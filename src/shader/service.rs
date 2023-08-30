@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
-use std::thread;
+use std::{fs, thread};
+use time::format_description;
 
 use crate::shader::PreProcessor;
 use crate::{PreProcessorConfig, ShaderError, SkuggboxShader};
@@ -61,18 +62,14 @@ impl ShaderService {
     pub fn run(&mut self, gl: &glow::Context) -> Result<(), ShaderError> {
         // pull file updates from the channel
         if let Some(recv) = &self.receiver {
-            let value = recv.try_recv();
-            if value.is_ok() {
-                let changed_file_path = value.ok().unwrap();
-
+            if let Ok(changed_path_buf) = recv.try_recv() {
                 for shader in self.shaders.iter_mut() {
-                    if shader.uses_file(&changed_file_path) {
-                        println!("reloading shader: {:?}", shader.get_main_shader_path());
-                        let reloaded_shader =
-                            self.pre_processor.load_file(shader.get_main_shader_path());
-                        shader.mark_for_recompilation(reloaded_shader);
+                    if shader.uses_file(&changed_path_buf) {
+                        let main_shader_path = shader.get_main_shader_path();
+                        log::debug!("Reloading shader {:?}", main_shader_path);
 
-                        // TODO: If the included files change in the shader, they won't be watched
+                        let reloaded_sahder = self.pre_processor.load_file(main_shader_path);
+                        shader.mark_for_recompilation(reloaded_sahder);
                     }
                 }
             }
@@ -109,6 +106,50 @@ impl ShaderService {
         for shader in &self.shaders {
             log::info!("{}", shader.content.shader_id);
             log::info!("{}", shader.content.shader_src);
+        }
+    }
+
+    /// Saves the current state to disk
+    /// Make a `snapshots` dir inside the current directory and save the file with
+    /// datetime.glsl
+    /// TODO(mathias): Save diff instead of the whole file and allow going back-forth between diffs
+    pub fn save_snapshot(&self) {
+        if self.last_error.is_none() {
+            log::debug!("Snapshot: save as");
+
+            let source = self
+                .shaders
+                .iter()
+                .map(|shader| shader.content.shader_src.clone())
+                .collect::<Vec<String>>()
+                .join("");
+
+            // create dir if it doesn't exist yet
+            let base_shader = self.shaders.first().unwrap();
+
+            if let Some(path) = base_shader.content.main_shader_path.parent() {
+                let snapshot_dir = path.join("snapshots");
+                dbg!(&snapshot_dir);
+
+                // Create directory if it doesn't exist
+                if !snapshot_dir.is_dir() {
+                    fs::create_dir(snapshot_dir.clone()).expect("Failed to create snapshot dir");
+                    log::debug!("Created snapshot dir {:?}", snapshot_dir);
+                }
+
+                // Save snapshot into snapshot dir
+                let format =
+                    format_description::parse("[year][month][day]_[hour][minute][second]").unwrap();
+
+                let datetime = time::OffsetDateTime::now_local()
+                    .unwrap()
+                    .format(&format)
+                    .unwrap();
+
+                let snapshot_filepath = snapshot_dir.join(format!("snapshot-{}.glsl", datetime));
+                log::info!("Snapshot: Saving to {:?}", &snapshot_filepath.clone());
+                fs::write(snapshot_filepath, source).unwrap();
+            };
         }
     }
 }
