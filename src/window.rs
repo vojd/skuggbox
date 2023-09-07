@@ -5,8 +5,9 @@ use glutin::context::{
     PossiblyCurrentContext, Version,
 };
 use glutin::display::{GetGlDisplay, GlDisplay};
-use glutin::surface::{GlSurface, Surface, WindowSurface};
+use glutin::surface::{GlSurface, Surface, SwapInterval, WindowSurface};
 use std::ffi::CString;
+use std::num::NonZeroU32;
 use std::sync::Arc;
 
 use glutin_winit::{DisplayBuilder, GlWindow};
@@ -125,6 +126,14 @@ impl AppWindow {
             .unwrap()
             .make_current(&gl_surface)
             .unwrap();
+
+        // Try to enable vsync
+        log::info!("Window: Enabling vsync");
+        if let Err(err) = gl_surface
+            .set_swap_interval(&gl_context, SwapInterval::Wait(NonZeroU32::new(1).unwrap()))
+        {
+            log::error!("Window: {:?}", err);
+        }
 
         let gl_display = gl_config.display();
         let gl = unsafe {

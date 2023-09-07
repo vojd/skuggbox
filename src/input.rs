@@ -16,8 +16,9 @@ pub fn handle_events<T>(
     app_state: &mut AppState,
     actions: &mut Vec<Action>,
 ) {
-    *control_flow = ControlFlow::Poll;
+    puffin::profile_function!();
 
+    *control_flow = ControlFlow::Poll;
     match event {
         Event::WindowEvent { event, .. } => {
             match event {

@@ -39,6 +39,7 @@ pub fn handle_actions(
     shader_service: &mut ShaderService,
     control_flow: &mut ControlFlow,
 ) {
+    puffin::profile_function!();
     for action in actions.drain(..) {
         match action {
             Action::AppExit => {

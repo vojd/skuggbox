@@ -17,6 +17,7 @@ impl Renderer {
     }
 
     pub fn draw(&self, state: &mut AppState, shader_service: &ShaderService) {
+        puffin::profile_function!();
         let gl = self.gl.clone();
         unsafe {
             gl.bind_vertex_array(Some(self.vertex_array));

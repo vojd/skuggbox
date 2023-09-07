@@ -110,7 +110,7 @@ impl SkuggboxShader {
     }
 
     /// Detected uniforms in the shader source
-    pub fn find_shader_uniforms(&mut self, gl: &glow::Context) {
+    pub fn bind_uniform_locations(&mut self, gl: &glow::Context) {
         if let Some(program) = self.program {
             self.locations = unsafe { ShaderProgram::uniform_locations(gl, program) };
         }

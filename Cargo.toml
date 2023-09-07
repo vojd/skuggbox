@@ -30,6 +30,8 @@ glutin-winit = "0.3.0"
 log = "0.4"
 macros = { path = "components/macros", version = "0.1" }
 memoffset = "0.9"
+puffin = "0.16"
+puffin_egui = "0.22"
 # required by glutin to access the raw window handle from the &Window
 raw-window-handle = "0.5.0"
 regex = "1.9"

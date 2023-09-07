@@ -60,6 +60,8 @@ impl ShaderService {
     /// It is basically the same as watching for file changes and the
     /// reload the shaders whenever that happens.
     pub fn run(&mut self, gl: &glow::Context) -> Result<(), ShaderError> {
+        puffin::profile_function!();
+
         // pull file updates from the channel
         if let Some(recv) = &self.receiver {
             if let Ok(changed_path_buf) = recv.try_recv() {
@@ -79,9 +81,9 @@ impl ShaderService {
             if shader.ready_to_compile {
                 match shader.try_to_compile() {
                     Ok(_) => {
-                        log::debug!("Shader compiled");
-                        shader.find_shader_uniforms(gl);
+                        shader.bind_uniform_locations(gl);
                         self.last_error = None;
+                        log::info!("Shader compiled");
                     }
                     Err(e) => {
                         self.last_error = Some(e.clone());
@@ -90,6 +92,7 @@ impl ShaderService {
                 }
             }
         }
+
         Ok(())
     }
 

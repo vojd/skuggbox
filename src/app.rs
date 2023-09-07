@@ -56,6 +56,9 @@ impl App {
         log::debug!("MainLoop: Start");
 
         while app_state.is_running {
+            puffin::profile_scope!("Main loop");
+            puffin::GlobalProfiler::lock().new_frame();
+
             let _ = shader_service.run(gl.as_ref());
             app_state.shader_error = shader_service.last_error.clone();
 
@@ -76,6 +79,7 @@ impl App {
                 // TODO: No unwrap on the window object
 
                 let _repaint_after = ui.run(app_window.window.as_ref().unwrap(), |egui_ctx| {
+                    puffin::profile_scope!("UI: update");
                     egui::TopBottomPanel::top("view_top").show(egui_ctx, |ui| {
                         top_bar(ui, app_state, &mut actions, &shader_service);
                     });
@@ -95,23 +99,32 @@ impl App {
                             });
                         });
                     }
+
+                    puffin_egui::profiler_window(egui_ctx);
                 });
 
+                puffin::profile_scope!("Handle: Events");
                 handle_events(&event, control_flow, &mut ui, app_state, &mut actions);
 
+                puffin::profile_scope!("Handle: Events");
                 handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
             });
 
             // Render the OpenGL scene
-            renderer.draw(app_state, &shader_service);
+            {
+                puffin::profile_scope!("Renderer::draw");
+                renderer.draw(app_state, &shader_service);
+            }
 
             // Render UI on top of OpenGL scene
             if app_state.ui_visible && app_window.window.is_some() {
+                puffin::profile_scope!("UI: paint");
                 if let Some(window) = &app_window.window {
                     ui.paint(window);
                 }
             }
 
+            puffin::profile_scope!("Swap buffers");
             app_window.swap_buffers();
 
             app_state.timer.stop();

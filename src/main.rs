@@ -23,6 +23,8 @@ fn create_new_default_shader(path: PathBuf) -> std::io::Result<u64> {
 fn main() -> anyhow::Result<(), anyhow::Error> {
     SimpleLogger::new().init().unwrap();
 
+    puffin::set_scopes_on(true);
+
     // Parse command line arguments using `structopt`
     let config = AppConfig::parse();
     let mut app = App::from_config(config.clone());
