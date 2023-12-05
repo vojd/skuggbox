@@ -98,6 +98,7 @@ impl ShaderService {
 
     /// Reloading re-constructs all shaders.
     pub fn reload(&mut self, config: PreProcessorConfig) {
+        puffin::profile_function!();
         self.pre_processor.config = config;
         for shader in self.shaders.iter_mut() {
             let reloaded_shader = self.pre_processor.load_file(shader.get_main_shader_path());
@@ -132,7 +133,6 @@ impl ShaderService {
 
             if let Some(path) = base_shader.content.main_shader_path.parent() {
                 let snapshot_dir = path.join("snapshots");
-                dbg!(&snapshot_dir);
 
                 // Create directory if it doesn't exist
                 if !snapshot_dir.is_dir() {
