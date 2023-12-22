@@ -1,6 +1,5 @@
 use crate::camera::OrbitCamera;
-use crate::{seek, AppState, PlayMode, PlaybackControl, PreProcessorConfig, ShaderService};
-use glam::Vec2;
+use crate::{seek, AppState, Mouse, PlayMode, PlaybackControl, PreProcessorConfig, ShaderService};
 use winit::event_loop::ControlFlow;
 
 /// First person camera movement
@@ -117,7 +116,7 @@ pub fn handle_actions(
             },
             Action::CameraReset => {
                 app_state.camera = Box::from(OrbitCamera::default());
-                app_state.mouse.delta = Vec2::new(0.0, 0.0);
+                app_state.mouse = Mouse::default();
             }
             Action::UIToggleVisible => {
                 app_state.ui_visible = !app_state.ui_visible;
