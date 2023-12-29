@@ -7,38 +7,49 @@ members = [
 
 [package]
 name = "skuggbox"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["vojd <github.com/vojd>", "klovman <github.com/bysse>"]
 edition = "2018"
 
-[dependencies]
+[workspace.dependencies]
+bytemuck = "1.9"
+egui = { version = "0.23.0", features = ["bytemuck"] }
+egui-winit = { version = "0.23.0", optional = false, default-features = true }
+gl = "*"
+glam = "0.24"
+glow = "0.13"
+glutin = "0.30"
+glutin-winit = "0.3.0"
+# required by glutin to access the raw window handle from the &Window
+raw-window-handle = "0.5.2"
+tracing = { version = "0.1", default-features = false, features = ["std"] }
+winit = "0.28.7"
 
+[dependencies]
 # local dependencies
 ui-backend = { path = "components/ui-backend", version = "0.1.0" }
 glsl-watcher = { path = "components/glsl-watcher", version = "0.0.1" }
-
-anyhow = "1.0"
-bytemuck = "1.9"
-clap = { version = "4.3", features = ["derive"] }
-egui = { version = "0.22.0", features = ["bytemuck"]}
-egui-winit = { version = "0.22.0", optional = false, default-features = true }
-gl = "*"
-glam = "0.24"
-glow = "0.12"
-glutin = "0.30"
-glutin-winit = "0.3.0"
-log = "0.4"
 macros = { path = "components/macros", version = "0.1" }
-memoffset = "0.9"
-# required by glutin to access the raw window handle from the &Window
-raw-window-handle = "0.5.0"
+
+# external workspace dependencies
+anyhow = "1.0"
+bytemuck = { workspace = true }
+clap = { version = "4.3", features = ["derive"] }
+egui = { workspace = true }
+egui-winit = { workspace = true }
+gl = { workspace = true }
+glam = { workspace = true }
+glow = { workspace = true }
+glutin = { workspace = true }
+glutin-winit = { workspace = true }
+tracing = { workspace = true }
+winit = { workspace = true }
+
+# external dependencies
+log = "0.4"
+raw-window-handle = { workspace = true }
 regex = "1.9"
 serde = { version = "1.0", features = ["derive"] }
 simple_logger = "4.2"
-# simple_logger is dependent on `time`.
-time = { version = "0.3.26", features = ["local-offset"]}
-tracing = { version = "0.1", default-features = false, features = ["std"] }
-quote = "1.0"
-#clap = { git = "https://github.com/clap-rs/clap/", version = "3.0.0-beta.4" } #clap-v3 = "3.0.0-beta.1"
-winit = "0.28.6"
-which = "4.4" # Used for locating minime-preprocess
+time = { version = "0.3.26", features = ["local-offset"] } # simple_logger is dependent on `time`.
+which = "5.0.0" # Used for locating minime-preprocess
