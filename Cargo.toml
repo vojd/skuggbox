@@ -13,11 +13,11 @@ edition = "2018"
 
 [workspace.dependencies]
 bytemuck = "1.9"
-egui = { version = "0.22.0", features = ["bytemuck"] }
-egui-winit = { version = "0.22.0", optional = false, default-features = true }
+egui = { version = "0.23.0", features = ["bytemuck"] }
+egui-winit = { version = "0.23.0", optional = false, default-features = true }
 gl = "*"
 glam = "0.24"
-glow = "0.12"
+glow = "0.13"
 glutin = "0.30"
 glutin-winit = "0.3.0"
 # required by glutin to access the raw window handle from the &Window
