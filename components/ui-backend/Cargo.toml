@@ -7,10 +7,13 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bytemuck = "1.9"
-egui = { version = "0.22.0", features = ["bytemuck"]}
-egui-winit = { version = "0.22.0", optional = false, default-features = true }
-glow = "0.12"
+# local deps
 macros = { path = "../macros", version = "0.1.0" }
-tracing = { version = "0.1", default-features = false, features = ["std"] }
-winit = "0.28.6"
+
+# external deps
+bytemuck = { workspace = true }
+egui = { workspace = true }
+egui-winit = { workspace = true }
+glow = { workspace = true }
+tracing = { workspace = true }
+winit = { workspace = true }
