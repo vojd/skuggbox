@@ -20,17 +20,18 @@ glam = "0.24"
 glow = "0.12"
 glutin = "0.30"
 glutin-winit = "0.3.0"
-
+# required by glutin to access the raw window handle from the &Window
+raw-window-handle = "0.5.0"
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 winit = "0.28.6"
 
 [dependencies]
-
 # local dependencies
 ui-backend = { path = "components/ui-backend", version = "0.1.0" }
 glsl-watcher = { path = "components/glsl-watcher", version = "0.0.1" }
 macros = { path = "components/macros", version = "0.1" }
 
+# external workspace dependencies
 anyhow = "1.0"
 bytemuck = { workspace = true }
 clap = { version = "4.3", features = ["derive"] }
@@ -41,17 +42,14 @@ glam = { workspace = true }
 glow = { workspace = true }
 glutin = { workspace = true }
 glutin-winit = { workspace = true }
+tracing = { workspace = true }
 winit = { workspace = true }
 
+# external dependencies
 log = "0.4"
-memoffset = "0.9"
-# required by glutin to access the raw window handle from the &Window
-raw-window-handle = "0.5.0"
+raw-window-handle = { workspace = true }
 regex = "1.9"
 serde = { version = "1.0", features = ["derive"] }
 simple_logger = "4.2"
-# simple_logger is dependent on `time`.
-time = { version = "0.3.26", features = ["local-offset"] }
-tracing = { workspace = true }
-quote = "1.0"
+time = { version = "0.3.26", features = ["local-offset"] } # simple_logger is dependent on `time`.
 which = "4.4" # Used for locating minime-preprocess
