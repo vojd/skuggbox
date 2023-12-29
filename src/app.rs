@@ -1,19 +1,21 @@
 use std::sync::Arc;
+
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
+use ui_backend::UiWindow;
+
 use crate::renderer::Renderer;
 use crate::{
-    handle_actions, handle_events, top_bar, Action, AppConfig, AppState, AppWindow, PlayMode,
-    ShaderService,
+    handle_actions, handle_events, Action, AppConfig, AppState, AppWindow, PlayMode, ShaderService,
+    SkuggboxUi,
 };
-use ui_backend::Ui;
 
 pub struct App {
     pub event_loop: EventLoop<()>,
     pub app_window: AppWindow,
     pub app_state: AppState,
-    pub ui: Option<Ui>,
+    pub ui_window: Option<UiWindow>,
     pub gl: Option<Arc<glow::Context>>,
 }
 
@@ -26,7 +28,7 @@ impl App {
             event_loop,
             app_window,
             app_state,
-            ui,
+            ui_window: ui,
             gl: None,
         }
     }
@@ -37,13 +39,14 @@ impl App {
             app_window,
             app_state,
             gl: _,
-            ui: _,
+            ui_window: _,
         } = self;
 
         let mut actions: Vec<Action> = vec![];
 
         let gl = app_window.create_window_context();
-        let mut ui = Ui::new(event_loop, gl.clone());
+        let mut ui_window = UiWindow::new(event_loop, gl.clone());
+        let mut app_ui = SkuggboxUi::new();
 
         let shader_files = config.files.unwrap();
         log::debug!("Shader files: {:?}", shader_files);
@@ -61,7 +64,7 @@ impl App {
 
             // force UI open if we have a shader error
             if app_state.shader_error.is_some() {
-                app_state.ui_visible = true;
+                app_state.is_ui_visible = true;
             }
 
             if matches!(app_state.play_mode, PlayMode::Playing) {
@@ -75,29 +78,27 @@ impl App {
 
                 // TODO: No unwrap on the window object
 
-                let _repaint_after = ui.run(app_window.window.as_ref().unwrap(), |egui_ctx| {
-                    egui::TopBottomPanel::top("view_top").show(egui_ctx, |ui| {
-                        top_bar(ui, app_state, &mut actions, &shader_service);
+                let _repaint_after =
+                    ui_window.run(app_window.window.as_ref().unwrap(), |egui_ctx| {
+                        egui::TopBottomPanel::top("view_top").show(egui_ctx, |ui| {
+                            app_ui.top_bar(ui, app_state, &mut actions, &shader_service);
+                        });
+
+                        if let Some(error) = &app_state.shader_error {
+                            let error = format!("{}", error);
+                            egui::TopBottomPanel::bottom("view_bottom").show(egui_ctx, |ui| {
+                                app_ui.shader_error_panel(ui, error);
+                            });
+                        }
                     });
 
-                    if let Some(error) = &app_state.shader_error {
-                        let mut error = format!("{}", error);
-                        egui::TopBottomPanel::bottom("view_bottom").show(egui_ctx, |ui| {
-                            ui.horizontal(|ui| {
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut error)
-                                        .font(egui::TextStyle::Monospace)
-                                        .code_editor()
-                                        .desired_rows(4)
-                                        .desired_width(f32::INFINITY)
-                                        .lock_focus(true),
-                                )
-                            });
-                        });
-                    }
-                });
-
-                handle_events(&event, control_flow, &mut ui, app_state, &mut actions);
+                handle_events(
+                    &event,
+                    control_flow,
+                    &mut ui_window,
+                    app_state,
+                    &mut actions,
+                );
 
                 handle_actions(&mut actions, app_state, &mut shader_service, control_flow);
             });
@@ -106,9 +107,9 @@ impl App {
             renderer.draw(app_state, &shader_service);
 
             // Render UI on top of OpenGL scene
-            if app_state.ui_visible && app_window.window.is_some() {
+            if app_state.is_ui_visible && app_window.window.is_some() {
                 if let Some(window) = &app_window.window {
-                    ui.paint(window);
+                    ui_window.paint(window);
                 }
             }
 

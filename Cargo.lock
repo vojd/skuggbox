@@ -26,13 +26,14 @@ checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
 name = "ahash"
-version = "0.8.2"
+version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf6ccdb167abbf410dcb915cabd428929d7f6a04980b54a11f26a39f1c7f7107"
+checksum = "91429305e9f0a25f6205c5b8e0d2db09e0708a7a6df0f42212bb56c32c8ac97a"
 dependencies = [
  "cfg-if",
  "once_cell",
  "version_check",
+ "zerocopy",
 ]
 
 [[package]]
@@ -315,7 +316,7 @@ dependencies = [
  "heck",
  "proc-macro2",
  "quote",
- "syn 2.0.29",
+ "syn 2.0.43",
 ]
 
 [[package]]
@@ -474,14 +475,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "ecolor"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b7637fc2e74d17e52931bac90ff4fc061ac776ada9c7fa272f24cdca5991972"
+
+[[package]]
 name = "egui"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3aef8ec3ae1b772f340170c65bf27d5b8c28f543a0116c844d2ac08d01123e7"
 dependencies = [
  "ahash",
- "epaint",
+ "epaint 0.22.0",
  "log",
+ "nohash-hasher",
+]
+
+[[package]]
+name = "egui"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c55bcb864b764eb889515a38b8924757657a250738ad15126637ee2df291ee6b"
+dependencies = [
+ "ahash",
+ "epaint 0.24.1",
  "nohash-hasher",
 ]
 
@@ -492,13 +510,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a49155fd4a0a4fb21224407a91de0030847972ef90fc64edb63621caea61cb2"
 dependencies = [
  "arboard",
- "egui",
+ "egui 0.22.0",
  "instant",
  "log",
  "raw-window-handle",
  "smithay-clipboard",
  "webbrowser",
  "winit",
+]
+
+[[package]]
+name = "egui_file"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04989cc1638c8c1c9e7347180a90bc58a5ae9c2236668a6bd927df0e185ff47b"
+dependencies = [
+ "egui 0.24.1",
 ]
 
 [[package]]
@@ -517,6 +544,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "emath"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a045c6c0b44b35e98513fc1e9d183ab42881ac27caccb9fa345465601f56cce4"
+
+[[package]]
 name = "epaint"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -526,9 +559,23 @@ dependencies = [
  "ahash",
  "atomic_refcell",
  "bytemuck",
- "ecolor",
- "emath",
+ "ecolor 0.22.0",
+ "emath 0.22.0",
  "log",
+ "nohash-hasher",
+ "parking_lot",
+]
+
+[[package]]
+name = "epaint"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d1b9e000d21bab9b535ce78f9f7745be28b3f777f6c7223936561c5c7fefab8"
+dependencies = [
+ "ab_glyph",
+ "ahash",
+ "ecolor 0.24.1",
+ "emath 0.24.1",
  "nohash-hasher",
  "parking_lot",
 ]
@@ -1144,7 +1191,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.29",
+ "syn 2.0.43",
 ]
 
 [[package]]
@@ -1301,9 +1348,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.66"
+version = "1.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18fb31db3f9bddb2ea821cde30a9f70117e3f119938b5ee630b7403aa6e2ead9"
+checksum = "75cb1540fadbd5b8fbccc4dddad2734eba435053f725621c070711a14bb5f4b8"
 dependencies = [
  "unicode-ident",
 ]
@@ -1459,8 +1506,9 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "clap",
- "egui",
+ "egui 0.22.0",
  "egui-winit",
+ "egui_file",
  "gl",
  "glam",
  "glow",
@@ -1557,9 +1605,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.29"
+version = "2.0.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c324c494eba9d92503e6f1ef2e6df781e78f6a7705a0202d9801b198807d518a"
+checksum = "ee659fb5f3d355364e1f3e5bc10fb82068efbf824a1e9d1c9504244a6469ad53"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1696,7 +1744,7 @@ name = "ui-backend"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
- "egui",
+ "egui 0.22.0",
  "egui-winit",
  "glow",
  "macros",
@@ -2217,3 +2265,23 @@ name = "xml-rs"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b07db065a5cf61a7e4ba64f29e67db906fb1787316516c4e6e5ff0fea1efcd8a"
+
+[[package]]
+name = "zerocopy"
+version = "0.7.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74d4d3961e53fa4c9a25a8637fc2bfaf2595b3d3ae34875568a5cf64787716be"
+dependencies = [
+ "zerocopy-derive",
+]
+
+[[package]]
+name = "zerocopy-derive"
+version = "0.7.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ce1b18ccd8e73a9321186f97e46f9f04b778851177567b1975109d26a08d2a6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.43",
+]

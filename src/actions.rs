@@ -119,8 +119,8 @@ pub fn handle_actions(
                 app_state.mouse = Mouse::default();
             }
             Action::UIToggleVisible => {
-                app_state.ui_visible = !app_state.ui_visible;
-                log::debug!("Action::UIToggleVisible {:?}", app_state.ui_visible);
+                app_state.is_ui_visible = !app_state.is_ui_visible;
+                log::debug!("Action::UIToggleVisible {:?}", app_state.is_ui_visible);
             }
             Action::ToggleFullscreen => {
                 app_state.is_fullscreen = !app_state.is_fullscreen;

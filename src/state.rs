@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct AppState {
     pub width: i32,
     pub height: i32,
-    /// App state - is the application running?
+    /// App state - is the application running? Not to confuse with play/pause/stop
     pub is_running: bool,
     pub timer: Timer,
     pub delta_time: f32,
@@ -15,7 +15,7 @@ pub struct AppState {
     pub modifier: ActionModifier,
     /// Running or paused?
     pub play_mode: PlayMode,
-    pub ui_visible: bool,
+    pub is_ui_visible: bool,
     pub is_fullscreen: bool,
     pub camera: Box<dyn CameraModel>,
     // TODO(mathias): Move the camera pos into the camera model
@@ -36,8 +36,8 @@ impl Default for AppState {
             playback_time: 0.0,
             mouse: Mouse::default(),
             modifier: ActionModifier::Normal,
-            play_mode: PlayMode::Playing,
-            ui_visible: true,
+            play_mode: PlayMode::Paused,
+            is_ui_visible: true,
             is_fullscreen: false,
             camera: Box::from(OrbitCamera::default()),
             camera_pos: Vec3::default(),
@@ -48,6 +48,7 @@ impl Default for AppState {
 }
 
 /// Bad naming but these are the values we can set from within skuggbox like colors
+/// TODO(mathias): There's some idea here to store certain things on the cpu...
 #[derive(Default)]
 pub struct SceneVars {
     pub color_a: [f32; 3],

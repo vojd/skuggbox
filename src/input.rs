@@ -1,4 +1,4 @@
-use ui_backend::Ui;
+use ui_backend::UiWindow;
 use winit::{
     event::{ElementState, Event, VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,
@@ -12,7 +12,7 @@ use crate::{
 pub fn handle_events<T>(
     event: &Event<'_, T>,
     control_flow: &mut ControlFlow,
-    ui: &mut Ui,
+    ui: &mut UiWindow,
     app_state: &mut AppState,
     actions: &mut Vec<Action>,
 ) {

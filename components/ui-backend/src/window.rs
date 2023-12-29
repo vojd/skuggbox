@@ -2,7 +2,7 @@ pub use egui_winit;
 use egui_winit::{winit, EventResponse};
 
 /// Use [`egui`] from a [`glow`] app based on [`winit`].
-pub struct Ui {
+pub struct UiWindow {
     pub egui_ctx: egui::Context,
     pub egui_winit: egui_winit::State,
     pub painter: crate::Painter,
@@ -11,7 +11,7 @@ pub struct Ui {
     textures_delta: egui::TexturesDelta,
 }
 
-impl Ui {
+impl UiWindow {
     pub fn new<E>(
         event_loop: &winit::event_loop::EventLoopWindowTarget<E>,
         gl: std::sync::Arc<glow::Context>,
